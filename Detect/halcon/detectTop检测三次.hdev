@@ -38,6 +38,7 @@
 <c>    *'D:/Images/Top/Bad' </c>
 <c>    *'D:/Images/Top/All'</c>
 <c>    </c>
+<l>OKNUM:=0</l>
 <l>workPostion:= 2</l>
 <c></c>
 <l>if(workPostion==0)//第一工位前3张图片处理</l>
@@ -54,7 +55,7 @@
 <c>        *检测槽内异物，包络线直径，钩宽，钩变形，钩不居中</c>
 <l>        detectTop (Image, WindowHandle, input_Scale_1, input_Scale_2, input_Scale_3, input_Scale_4, BaoluoDiameterUp, BaoluoDiameterDown, GouWidthUp, GouWidthDown, Result)</l>
 <l>        if(Result==0)</l>
-<l>            input_Scale_4 := input_Scale_4+1</l>
+<l>            OKNUM := OKNUM+1</l>
 <l>        endif</l>
 <c>    </c>
 <l>    endfor</l>
@@ -70,7 +71,7 @@
 <c>    </c>
 <l>        detectTop2(Image, WindowHandle, prav2_1, prav2_2, prav2_3, prav2_4, prav2_5, prav2_6, prav2_7, prav2_8, Result)</l>
 <l>        if(Result==0)</l>
-<l>            input_Scale_4 := input_Scale_4+1</l>
+<l>            OKNUM := OKNUM+1</l>
 <l>        endif</l>
 <c></c>
 <c></c>
@@ -90,7 +91,7 @@
 <l>        detectSide (Image, WindowHandle, input_Scale_1s, input_Scale_2s, input_Scale_3s, input_Scale_4s, CaoWidthUp, CaoWidthDown, MaoCiWidth, MaoCiHeight, Result)</l>
 <c>        </c>
 <l>        if(Result==0)</l>
-<l>            input_Scale_4 := input_Scale_4+1</l>
+<l>            OKNUM := OKNUM+1</l>
 <l>        endif</l>
 <c></c>
 <l>    endfor</l>
@@ -899,7 +900,7 @@
 <c>*槽宽、槽连续</c>
 <l>Sidefun1 (ImagePJ, region1, outRegion1, WindowHandle, CaoWidthDown, CaoWidthUp, ret1)</l>
 <l>if(ret1==0 or ret1==-10)</l>
-<c>    *毛刺、粘铜</c>
+<c>    *粘铜、电木粉</c>
 <l>    Sidefun2 (ImagePJ, outRegion1, region2, WindowHandle, MaociWidth, MaociHeight, ret2)</l>
 <c>    </c>
 <c>    *片区大划伤、生锈</c>
