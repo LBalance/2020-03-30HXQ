@@ -1717,9 +1717,9 @@ void top2fun1(HObject ho_Image, HObject *ho_region1, HTuple hv_prav2_1, HTuple h
 		return;
 	}
 
-	GenEllipse(&ho_ROI_0, 1253.5, 1813.5, HTuple(-0.838415).TupleRad(), 1640.18, 1524.72);
+	GenEllipse(&ho_ROI_0, 1400, 2000, HTuple(-0.838415).TupleRad(), 1640.18, 1524.72);
 	ReduceDomain(ho_Image, ho_ROI_0, &ho_ImageReduced);
-	Threshold(ho_ImageReduced, &ho_Regions, 0, 86);
+	Threshold(ho_ImageReduced, &ho_Regions, 0, 180);
 	FillUp(ho_Regions, &ho_RegionFillUp);
 	OpeningCircle(ho_RegionFillUp, &ho_RegionOpening, 800);
 	ReduceDomain(ho_ImageReduced, ho_RegionOpening, &ho_ImageReduced1);
@@ -1730,7 +1730,8 @@ void top2fun1(HObject ho_Image, HObject *ho_region1, HTuple hv_prav2_1, HTuple h
 	ErosionCircle(ho_RegionOpening, &ho_circle4, 560);
 
 
-
+	 
+		DispObj(ho_circle3, hv_hwnd);
 	//Æø¿×¼ì²â
 
 
@@ -1799,6 +1800,10 @@ void DetectModule::detectTop2(HalconCpp::HObject& ho_Image, const HTuple& hv_Win
 		SetDraw(hv_hwnd, "margin");
 		SetLineWidth(hv_hwnd, 1);
 		set_display_font(hv_hwnd, 11, "mono", "false", "false");
+
+		CopyImage(ho_Image, &ho_imageCorrected);
+		CopyImage(ho_Image, &ho_imageCorrected1);
+
 
 		DispObj(ho_imageCorrected, hv_hwnd);
 
@@ -2117,17 +2122,26 @@ void Sidefun2(HObject ho_Image, HObject ho_inRegion2, HObject *ho_region2, HTupl
 {
 
 	// Local iconic variables
-	HObject  ho_EmptyRegion, ho_RectangleLeft, ho_ConnectedRegions;
-	HObject  ho_ObjectSelected, ho_ObjectSelected_, ho_RegionMiddle;
-	HObject  ho_ImageReduced, ho_Regions, ho_ConnectedRegions1;
-	HObject  ho_SelectedRegions, ho_ObjectSelected1;
+	HObject  ho_EmptyRegion, ho_RectangleLeft, ho_RectangleRight;
+	HObject  ho_RectangleMiddle, ho_ConnectedRegions, ho_ObjectSelected;
+	HObject  ho_RegionDilation, ho_ImageReduced2, ho_ObjectSelected_;
+	HObject  ho_RegionLeft, ho_RegionMiddle, ho_ImageReduced;
+	HObject  ho_Regions, ho_ConnectedRegions1, ho_SelectedRegions;
+	HObject  ho_ObjectSelected1, ho_RegionRight, ho_RegionDilation1;
+	HObject  ho_ImageReduced1, ho_Regions1, ho_RegionClosing;
+	HObject  ho_RegionOpening, ho_RegionRight_, ho_ImageReduced3;
+	HObject  ho_EdgeAmplitude, ho_Regions2, ho_ConnectedRegions2;
+	HObject  ho_SelectedRegions1, ho_ObjectSelected2, ho_RegionDilation2;
+	HObject  ho_ImageReduced4, ho_Regions3, ho_ConnectedRegions3;
+	HObject  ho_SelectedRightMax;
 
 	// Local control variables
 	HTuple  hv_heightThreshold, hv_Row, hv_Column;
 	HTuple  hv_Width, hv_Height, hv_Width1, hv_Height1, hv_w;
-	HTuple  hv_h, hv_Value5, hv_inRegion2Column1, hv_debugMark;
-	HTuple  hv_Index, hv_ObjectSelectedcolumn1, hv_Value2, hv_xxxxx;
-	HTuple  hv_Number, hv_Index1, hv_errorRgnArea;
+	HTuple  hv_h, hv_inRegion2Column1, hv_inRegion2Column2;
+	HTuple  hv_debugMark, hv_Index, hv_ObjectSelectedcolumn1;
+	HTuple  hv_xxxxx, hv_Number, hv_Index1, hv_ValueRightArea;
+	HTuple  hv_ValueRightHeight, hv_errorRgnArea;
 
 
 	(*hv_ret2) = 0;
@@ -2152,10 +2166,13 @@ void Sidefun2(HObject ho_Image, HObject ho_inRegion2, HObject *ho_region2, HTupl
 		return;
 	}
 
-	RegionFeatures(ho_inRegion2, "column2", &hv_Value5);
 	RegionFeatures(ho_inRegion2, "column1", &hv_inRegion2Column1);
-	GenRectangle1(&ho_RectangleLeft, 0, hv_inRegion2Column1, hv_Height1, hv_inRegion2Column1 + 110);
+	GenRectangle1(&ho_RectangleLeft, 0, hv_inRegion2Column1, hv_Height1, hv_inRegion2Column1 + 120);
 
+	RegionFeatures(ho_inRegion2, "column2", &hv_inRegion2Column2);
+	GenRectangle1(&ho_RectangleRight, 0, hv_inRegion2Column2 - 200, hv_Height1, hv_inRegion2Column2);
+
+	GenRectangle1(&ho_RectangleMiddle, 0, hv_inRegion2Column1 + 120, hv_Height1, hv_inRegion2Column2 - 160);
 
 	Connection(ho_inRegion2, &ho_ConnectedRegions);
 
@@ -2166,28 +2183,33 @@ void Sidefun2(HObject ho_Image, HObject ho_inRegion2, HObject *ho_region2, HTupl
 	{
 		SelectObj(ho_ConnectedRegions, &ho_ObjectSelected, hv_Index);
 		RegionFeatures(ho_ObjectSelected, "column1", &hv_ObjectSelectedcolumn1);
-		RegionFeatures(ho_ObjectSelected, "rect2_len2", &hv_Value2);
+		DilationRectangle1(ho_ObjectSelected, &ho_RegionDilation, 0.5, 20);
+		ReduceDomain(ho_Image, ho_RegionDilation, &ho_ImageReduced2);
+
 		hv_xxxxx = 25;
 		ErosionRectangle1(ho_ObjectSelected, &ho_ObjectSelected_, 1, hv_xxxxx);
-		Difference(ho_ObjectSelected_, ho_RectangleLeft, &ho_RegionMiddle);
+		//×ó¶ÎÒìÎï¼ì²â
+		Intersection(ho_ObjectSelected_, ho_RectangleLeft, &ho_RegionLeft);
 
+
+
+		//ÖÐ¼ä¶ÎÒìÎï¼ì²â
+		Intersection(ho_ObjectSelected_, ho_RectangleMiddle, &ho_RegionMiddle);
 		ReduceDomain(ho_Image, ho_RegionMiddle, &ho_ImageReduced);
-		Threshold(ho_ImageReduced, &ho_Regions, 0, 35);
+		//intensity (RegionMiddle, ImageReduced, Mean, Deviation)
+		Threshold(ho_ImageReduced, &ho_Regions, 0, 30);
 		Connection(ho_Regions, &ho_ConnectedRegions1);
 		SelectShape(ho_ConnectedRegions1, &ho_SelectedRegions, "height", "and", 25, 100);
 		CountObj(ho_SelectedRegions, &hv_Number);
 		{
-			HTuple end_val43 = hv_Number;
-			HTuple step_val43 = 1;
-			for (hv_Index1 = 1; hv_Index1.Continue(end_val43, step_val43); hv_Index1 += step_val43)
+			HTuple end_val54 = hv_Number;
+			HTuple step_val54 = 1;
+			for (hv_Index1 = 1; hv_Index1.Continue(end_val54, step_val54); hv_Index1 += step_val54)
 			{
 				SelectObj(ho_SelectedRegions, &ho_ObjectSelected1, hv_Index1);
 
 				if (0 != 1)
 				{
-
-
-
 
 					if (0 != (hv_debugMark == 1))
 					{
@@ -2197,6 +2219,55 @@ void Sidefun2(HObject ho_Image, HObject ho_inRegion2, HObject *ho_region2, HTupl
 				}
 			}
 		}
+		//ÓÒ¶ÎÒìÎï¼ì²â
+		Intersection(ho_ObjectSelected_, ho_RectangleRight, &ho_RegionRight);
+		//ÖØÐÂÈ·¶¨²ÛµÄcolumn2£¬±ÜÃâÓÒ±ßÔµµÄÎóÅÐ
+		DilationRectangle1(ho_RegionRight, &ho_RegionDilation1, 1, 60);
+		ReduceDomain(ho_Image, ho_RegionDilation1, &ho_ImageReduced1);
+		Threshold(ho_ImageReduced1, &ho_Regions1, 167, 255);
+		ClosingRectangle1(ho_Regions1, &ho_RegionClosing, 5, 100);
+		OpeningRectangle1(ho_RegionClosing, &ho_RegionOpening, 1, 50);
+		Intersection(ho_RegionRight, ho_RegionOpening, &ho_RegionRight_);
+
+		ReduceDomain(ho_ImageReduced1, ho_RegionRight_, &ho_ImageReduced3);
+		SobelAmp(ho_ImageReduced3, &ho_EdgeAmplitude, "sum_abs", 5);
+		//intensity (RegionRight_, ImageReduced3, Mean1, Deviation1)
+		Threshold(ho_ImageReduced3, &ho_Regions2, 0, 25);
+		Connection(ho_Regions2, &ho_ConnectedRegions2);
+		SelectShape(ho_ConnectedRegions2, &ho_SelectedRegions1, "height", "and", 25,
+			100);
+		CountObj(ho_SelectedRegions1, &hv_Number);
+		{
+			HTuple end_val82 = hv_Number;
+			HTuple step_val82 = 1;
+			for (hv_Index1 = 1; hv_Index1.Continue(end_val82, step_val82); hv_Index1 += step_val82)
+			{
+				SelectObj(ho_SelectedRegions1, &ho_ObjectSelected2, hv_Index1);
+				//shape_trans (ObjectSelected2, RegionTrans, 'rectangle1')
+				//*         dilation_rectangle1 (RegionTrans, RegionDilation2, 1, 80)
+				//*         reduce_domain (EdgeAmplitude, RegionDilation2, ImageReduced4)
+				//*         threshold (ImageReduced4, Regions3, 0, 20)
+				DilationCircle(ho_ObjectSelected2, &ho_RegionDilation2, 6);
+				ReduceDomain(ho_EdgeAmplitude, ho_RegionDilation2, &ho_ImageReduced4);
+				Threshold(ho_ImageReduced4, &ho_Regions3, 27, 255);
+				RegionFeatures(ho_Regions3, "area", &hv_ValueRightArea);
+				Connection(ho_Regions3, &ho_ConnectedRegions3);
+				SelectShapeStd(ho_ConnectedRegions3, &ho_SelectedRightMax, "max_area", 70);
+				RegionFeatures(ho_SelectedRightMax, "height", &hv_ValueRightHeight);
+
+				if (0 != (HTuple(hv_ValueRightArea>200).TupleOr(hv_ValueRightHeight>25)))
+				{
+
+					if (0 != (hv_debugMark == 1))
+					{
+						// stop(...); only in hdevelop
+					}
+					ConcatObj(ho_EmptyRegion, ho_ObjectSelected2, &ho_EmptyRegion);
+				}
+			}
+		}
+
+
 	}
 
 	Union1(ho_EmptyRegion, &(*ho_region2));

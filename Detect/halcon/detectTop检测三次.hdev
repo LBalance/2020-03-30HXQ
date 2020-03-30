@@ -39,11 +39,12 @@
 <c>    *'D:/Images/Top/All'</c>
 <c>    </c>
 <l>OKNUM:=0</l>
+<c></c>
 <l>workPostion:= 2</l>
 <c></c>
 <l>if(workPostion==0)//第一工位前3张图片处理</l>
 <l>    list_image_files(\
-    'm:/长城换向器/56线/2020-03-25/Images/Top/All/'        ,\
+    'm:/胜克换向器/DS052J-H/2020-03-28/Images/Top/All/'        ,\
                      'default', [], ImageFiles)</l>
 <c>    </c>
 <l>    tuple_length (ImageFiles, Length)</l>
@@ -61,7 +62,7 @@
 <l>    endfor</l>
 <l>elseif(workPostion==1)//第一工位第4张图片处理</l>
 <l>    list_image_files(\
-    'm:/长城换向器/56线/2020-03-25/Images/Top2/All2/All/'      ,\
+    'm:/胜克换向器/DS052J-H/2020-03-28/Images/Top2/All/'      ,\
                      'default', [], ImageFiles)</l>
 <c>    </c>
 <l>    tuple_length (ImageFiles, Length)</l>
@@ -78,7 +79,7 @@
 <l>    endfor</l>
 <l>elseif(workPostion==2)//第二工位</l>
 <l>    list_image_files(\
-    'm:/胜克换向器/DS052J-H/2020-03-28/side/'      ,\
+    'm:/胜克换向器/DS052J-H/2020-03-28/Images/Side/All/'      ,\
                      'default', [], ImageFiles)</l>
 <c>    </c>
 <l>    tuple_length (ImageFiles, Length)</l>
@@ -1234,10 +1235,13 @@
 <l>    return()</l>
 <l>endif</l>
 <c></c>
-<l>region_features(inRegion2, 'column2', Value5)</l>
 <l>region_features(inRegion2, 'column1', inRegion2Column1)</l>
-<l>gen_rectangle1(RectangleLeft, 0, inRegion2Column1, Height1, inRegion2Column1+110)</l>
+<l>gen_rectangle1(RectangleLeft, 0, inRegion2Column1, Height1, inRegion2Column1+120)</l>
 <c></c>
+<l>region_features(inRegion2, 'column2', inRegion2Column2)</l>
+<l>gen_rectangle1(RectangleRight, 0, inRegion2Column2-200, Height1, inRegion2Column2)</l>
+<c></c>
+<l>gen_rectangle1(RectangleMiddle, 0, inRegion2Column1+120, Height1, inRegion2Column2-160)</l>
 <c></c>
 <l>connection(inRegion2, ConnectedRegions)</l>
 <c></c>
@@ -1247,13 +1251,21 @@
 <l>for Index := 1 to 22 by 1</l>
 <l>    select_obj(ConnectedRegions, ObjectSelected, Index)</l>
 <l>    region_features(ObjectSelected, 'column1', ObjectSelectedcolumn1)</l>
-<l>    region_features(ObjectSelected, 'rect2_len2', Value2)</l>
+<l>    dilation_rectangle1(ObjectSelected, RegionDilation, 0.5, 20)</l>
+<l>    reduce_domain(Image, RegionDilation, ImageReduced2)</l>
+<c>    </c>
 <l>    xxxxx:=25</l>
 <l>    erosion_rectangle1(ObjectSelected, ObjectSelected_, 1, xxxxx)</l>
-<l>    difference(ObjectSelected_, RectangleLeft, RegionMiddle)</l>
+<c>    *左段异物检测</c>
+<l>    intersection(ObjectSelected_, RectangleLeft, RegionLeft)</l>
 <c>    </c>
+<c>    </c>
+<c>    </c>
+<c>    *中间段异物检测</c>
+<l>    intersection(ObjectSelected_, RectangleMiddle, RegionMiddle)</l>
 <l>    reduce_domain(Image, RegionMiddle, ImageReduced)</l>
-<l>    threshold (ImageReduced, Regions, 0, 35)</l>
+<l>    *intensity (RegionMiddle, ImageReduced, Mean, Deviation)</l>
+<l>    threshold (ImageReduced, Regions, 0, 30)//</l>
 <l>    connection(Regions, ConnectedRegions1)</l>
 <l>    select_shape (ConnectedRegions1, SelectedRegions, 'height', 'and', 25, 100)</l>
 <l>    count_obj(SelectedRegions, Number)</l>
@@ -1261,16 +1273,54 @@
 <l>        select_obj(SelectedRegions, ObjectSelected1, Index1)</l>
 <c>        </c>
 <l>        if(1)</l>
-<c>            </c>
-<c>            </c>
-<c>            </c>
-<c>            </c>
+<c></c>
 <l>            if(debugMark==1)</l>
 <l>                stop()</l>
 <l>            endif</l>
 <l>            concat_obj(EmptyRegion, ObjectSelected1, EmptyRegion)</l>
 <l>        endif</l>
 <l>    endfor</l>
+<c>    *右段异物检测</c>
+<l>    intersection(ObjectSelected_, RectangleRight, RegionRight)</l>
+<c>    *重新确定槽的column2，避免右边缘的误判</c>
+<l>    dilation_rectangle1(RegionRight, RegionDilation1, 1, 60)</l>
+<l>    reduce_domain(Image, RegionDilation1, ImageReduced1)</l>
+<l>    threshold (ImageReduced1, Regions1, 167, 255)</l>
+<l>    closing_rectangle1(Regions1, RegionClosing, 5, 100)</l>
+<l>    opening_rectangle1(RegionClosing, RegionOpening, 1, 50)</l>
+<l>    intersection(RegionRight, RegionOpening, RegionRight_)</l>
+<c>    </c>
+<l>    reduce_domain(ImageReduced1, RegionRight_, ImageReduced3)</l>
+<l>    sobel_amp(ImageReduced3, EdgeAmplitude, 'sum_abs', 5)</l>
+<l>    *intensity(RegionRight_, ImageReduced3, Mean1, Deviation1)</l>
+<l>    threshold (ImageReduced3, Regions2, 0, 25)//</l>
+<l>    connection(Regions2, ConnectedRegions2)</l>
+<l>    select_shape (ConnectedRegions2, SelectedRegions1, 'height', 'and', 25, 100)</l>
+<l>    count_obj(SelectedRegions1, Number)</l>
+<l>    for Index1 := 1 to Number by 1</l>
+<l>        select_obj(SelectedRegions1, ObjectSelected2, Index1)</l>
+<l>*         shape_trans(ObjectSelected2, RegionTrans, 'rectangle1')</l>
+<l>*         dilation_rectangle1(RegionTrans, RegionDilation2, 1, 80)</l>
+<l>*         reduce_domain(EdgeAmplitude, RegionDilation2, ImageReduced4)</l>
+<l>*         threshold (ImageReduced4, Regions3, 0, 20)</l>
+<l>        dilation_circle(ObjectSelected2, RegionDilation2, 6)</l>
+<l>        reduce_domain(EdgeAmplitude, RegionDilation2, ImageReduced4)</l>
+<l>        threshold (ImageReduced4, Regions3, 27, 255)</l>
+<l>        region_features(Regions3, 'area', ValueRightArea)</l>
+<l>        connection(Regions3, ConnectedRegions3)</l>
+<l>        select_shape_std(ConnectedRegions3, SelectedRightMax, 'max_area', 70)</l>
+<l>        region_features(SelectedRightMax, 'height', ValueRightHeight)</l>
+<c>        </c>
+<l>        if(ValueRightArea&gt;200 or ValueRightHeight&gt;25)</l>
+<c>            </c>
+<l>            if(debugMark==1)</l>
+<l>                stop()</l>
+<l>            endif</l>
+<l>            concat_obj(EmptyRegion, ObjectSelected2, EmptyRegion)</l>
+<l>        endif</l>
+<l>    endfor</l>
+<c>    </c>
+<c>    </c>
 <l>endfor</l>
 <c></c>
 <l>union1(EmptyRegion, region2)</l>
@@ -2594,9 +2644,9 @@
 <l>    disp_message (hwnd, 'OK-良品', 'window', 40, 30, 'blue', 'true')</l>
 <l>endif</l>
 <l>set_display_font (WindowHandle, 11, 'mono', 'false', 'false')</l>
-<l>* stop ()</l>
+<l>stop ()</l>
 <l>return ()</l>
-<c>* </c>
+<c></c>
 </body>
 <docu id="detectTop2">
 <parameters>
@@ -2655,9 +2705,9 @@
 <l>    return()</l>
 <l>endif</l>
 <c></c>
-<l>gen_ellipse (ROI_0, 1253.5, 1813.5, rad(-0.838415), 1640.18, 1524.72)</l>
+<l>gen_ellipse (ROI_0, 1400, 2000, rad(-0.838415), 1640.18, 1524.72)</l>
 <l>reduce_domain(Image, ROI_0, ImageReduced)</l>
-<l>threshold (ImageReduced, Regions, 0, 86)</l>
+<l>threshold (ImageReduced, Regions, 0, 180)</l>
 <l>fill_up(Regions, RegionFillUp)</l>
 <l>opening_circle(RegionFillUp, RegionOpening, 800)</l>
 <l>reduce_domain(ImageReduced, RegionOpening, ImageReduced1)</l>
@@ -2668,7 +2718,7 @@
 <l>erosion_circle(RegionOpening, circle4, 560)</l>
 <c></c>
 <c></c>
-<c></c>
+<l>dev_display(circle3)</l>
 <c>*气孔检测</c>
 <c></c>
 <c></c>

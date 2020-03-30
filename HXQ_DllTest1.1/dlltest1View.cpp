@@ -762,8 +762,8 @@ Cdlltest1View::Cdlltest1View()
 		top6 = 56;
 		top7 = 2.5;
 		top8 = 15;
-		side1 = 0.62;/* 0.4;*/
-		side2 = 0.48;/*0.3;*/
+		side1 = 0.68;/* 0.4;*/
+		side2 = 0.42;/*0.3;*/
 		side3 = 0.15;
 		side4 = 0.15;
 		side5 = 15;
