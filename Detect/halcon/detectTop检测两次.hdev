@@ -1,0 +1,2112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.1" halcon_version="17.12">
+<procedure name="main">
+<interface/>
+<body>
+<c></c>
+<l>BaoluoDiameterUp:=28.00		//包络线直径上限</l>
+<l>BaoluoDiameterDown:=27.67	//包络线直径下限</l>
+<l>GouWidthUp:=1.2			   //钩宽上限</l>
+<l>GouWidthDown:=1.0 		   //钩宽下限</l>
+<l>input_Scale_1:=0.997   //顶部直径比值mm/pix///②//对求的值的缩放比例</l>
+<l>input_Scale_2 :=56     //钩套内孔宽度</l>
+<l>input_Scale_3 :=2.5    //钩与钩套交集区的最大內圆半径</l>
+<l>input_Scale_4 :=1      //备用</l>
+<c>*27.85/2373=0.011736</c>
+<c></c>
+<l>CaoWidthUp:=0.60</l>
+<l>CaoWidthDown:=0.50</l>
+<l>MaoCiWidth:=0.15</l>
+<l>MaoCiHeight:=0.15</l>
+<l>input_Scale_1s :=15    //钩居中比例调节（弃用上版的sidefun5调用）。 钩中心到上下槽距离差值（像素）</l>
+<l>input_Scale_2s :=5000     //片上黑色区域面积判断阀值</l>
+<l>input_Scale_3s :=1     //备用</l>
+<l>input_Scale_4s :=1     //备用</l>
+<c>*d=23.34  *3.1416/7011=0.01046</c>
+<c></c>
+<l>WindowHandle :=200000</l>
+<c>    *'C:/Users/Administrator/MVS/Data'</c>
+<c>    *'D:/Images/Top/Bad' </c>
+<c>    *'D:/Images/Top/All'</c>
+<l>if(1)</l>
+<l>    list_image_files(\
+    'D:/Images/Top/Bad'       ,\
+                     'default', [], ImageFiles)</l>
+<c>    </c>
+<l>     tuple_length (ImageFiles, Length)</l>
+<c>    </c>
+<l>    for Index := 0 to Length-1 by 1</l>
+<l>        *input_Scale_2 :=0.3</l>
+<l>        read_image(Image, ImageFiles[Index])</l>
+<c>    </c>
+<c>    *检测槽内异物，包络线直径，钩宽，钩变形，钩不居中</c>
+<l>        detectTop (Image, WindowHandle, input_Scale_1, input_Scale_2, input_Scale_3, input_Scale_4, BaoluoDiameterUp, BaoluoDiameterDown, GouWidthUp, GouWidthDown, Result)</l>
+<l>if(Result==0)</l>
+<l>    input_Scale_4 := input_Scale_4+1</l>
+<l>endif</l>
+<c>    </c>
+<l>    endfor</l>
+<l>else</l>
+<l>    list_image_files(\
+    'D:/Images/Side/Bad'      ,\
+                     'default', [], ImageFiles)</l>
+<c>    </c>
+<l>    tuple_length (ImageFiles, Length)</l>
+<l>    for Index := 0 to Length-1 by 1</l>
+<c>        </c>
+<l>        read_image(Image, ImageFiles[Index])</l>
+<c>    </c>
+<c>    *检测槽内异物，包络线直径，钩宽，钩变形，钩不居中</c>
+<l>        detectSide (Image, WindowHandle, input_Scale_1s, input_Scale_2s, input_Scale_3s, input_Scale_4s, CaoWidthUp, CaoWidthDown, MaoCiWidth, MaoCiHeight, Result)</l>
+<c>    </c>
+<l>if(Result==0)</l>
+<l>    input_Scale_4 := input_Scale_4+1</l>
+<l>endif</l>
+<c></c>
+<l>    endfor</l>
+<l>endif</l>
+<c></c>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+<procedure name="detectTop">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+</io>
+<ic>
+<par name="WindowHandle" base_type="ctrl" dimension="0"/>
+<par name="input_Scale_1" base_type="ctrl" dimension="0"/>
+<par name="input_Scale_2" base_type="ctrl" dimension="0"/>
+<par name="input_Scale_3" base_type="ctrl" dimension="0"/>
+<par name="input_Scale_4" base_type="ctrl" dimension="0"/>
+<par name="BaoLuoDiameterUp" base_type="ctrl" dimension="0"/>
+<par name="BaoLuoDiameterDown" base_type="ctrl" dimension="0"/>
+<par name="GouWidthUp" base_type="ctrl" dimension="0"/>
+<par name="GouWidthDown" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="Result" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c></c>
+<c>* 		output_Result 输出结果定义：</c>
+<c>* 		static const int Good				= 0x00;</c>
+<c>* 		static const int Bad					= 0x01;</c>
+<c>* 		static const int Gou					= 0x02;</c>
+<c>* 		static const int Cao					= 0x03;</c>
+<c>* 		static const int Liantong			= 0x04;</c>
+<c></c>
+<l>dev_update_off()</l>
+<l>dev_set_draw('margin')</l>
+<l>dev_set_line_width(1)</l>
+<l>set_display_font (WindowHandle, 11, 'mono', 'false', 'false')</l>
+<c></c>
+<l>funCorrectImage (Image, imageCorrected0, imageCorrected1)</l>
+<c></c>
+<l>dev_display(imageCorrected0)</l>
+<c></c>
+<c></c>
+<c></c>
+<c></c>
+<l>hwnd :=200000</l>
+<l>ret1:=0</l>
+<l>ret2:=0</l>
+<l>ret3:=0</l>
+<l>ret4:=0</l>
+<c>*检测槽内异物，堵槽不检</c>
+<l>*fun1 (imageCorrected1, region1, hwnd, ret1)</l>
+<c></c>
+<c>*包络线直径</c>
+<l>fun4 (imageCorrected0, region4, hwnd, input_Scale_1, (BaoLuoDiameterDown), (BaoLuoDiameterUp), ret4)</l>
+<c>*第一次检测，如果不合格，再判断第二张</c>
+<l>if(ret4!=0)</l>
+<c>    *擦出第一次外径检测的显示</c>
+<l>    dev_display(imageCorrected1)</l>
+<c>    *第二次检测</c>
+<l>    fun4 (imageCorrected1, region4, hwnd, input_Scale_1, (BaoLuoDiameterDown), (BaoLuoDiameterUp), ret4)</l>
+<l>    if(ret4==0)</l>
+<c>        *如果第二次检测合格，后续检测使用第二张图片</c>
+<l>        copy_image (imageCorrected1, imageCorrected0)</l>
+<l>        disp_message(hwnd, '钩长度二次检测合格', 'window', 120, 10, 'green', 'true')</l>
+<l>    endif</l>
+<l>endif</l>
+<c></c>
+<c>*钩宽，钩变形</c>
+<l>fun2 (imageCorrected0, gouTopRegions, region2, hwnd, GouWidthDown, GouWidthUp, ret2)</l>
+<c></c>
+<c>*钩宽不合格，钩间距离检测无意义，直接跳过。在外径不合格时也跳过。</c>
+<l>if(ret2==0 and ret4==0)</l>
+<c>    *钩不居中、钩偏，在堵槽情况下，改由 钩间距离+侧边 来检测</c>
+<l>    fun3 (imageCorrected0, gouTopRegions, region3, hwnd, input_Scale_2, input_Scale_3, ret3)</l>
+<l>endif</l>
+<c></c>
+<l>Result := 0</l>
+<l>set_display_font (WindowHandle, 14, 'mono', 'true', 'false')</l>
+<c>***此处第二版粘铜区分下料注意注意：同时有多种不良时最后反馈结果为粘铜</c>
+<c>***2个工位检测有多种不良结果时，最后反应为粘铜</c>
+<l>if(ret2&lt;0)</l>
+<l>    if(ret2&gt;-10)</l>
+<l>*         funMatchDifference (Image, WindowHandle)</l>
+<l>    endif</l>
+<l>    Result := 2</l>
+<l>    disp_message(hwnd, 'NG 钩宽度', 'window', 60, 10, 'red', 'true')</l>
+<l>endif</l>
+<l>if(ret3&lt;0)</l>
+<l>    if(ret3&gt;-10 and ret3!=-3)</l>
+<l>*         funMatchDifference (Image, WindowHandle)</l>
+<l>    endif</l>
+<l>    Result := 2</l>
+<l>    disp_message(hwnd, 'NG 钩偏钩扭', 'window', 90, 10, 'red', 'true')</l>
+<l>endif</l>
+<l>if(ret4&lt;0)</l>
+<l>    if(ret4&gt;-10 and ret4!=-4)</l>
+<l>*         funMatchDifference (Image, WindowHandle)</l>
+<l>    endif</l>
+<l>    Result := 2</l>
+<l>    disp_message(hwnd, 'NG 钩长度', 'window', 120, 10, 'red', 'true')</l>
+<l>endif</l>
+<l>if(ret1&lt;0)</l>
+<l>    if(ret1&gt;-10)</l>
+<l>*         funMatchDifference (Image, WindowHandle)</l>
+<l>    endif</l>
+<l>    Result := 4</l>
+<l>    disp_message(hwnd, 'NG 槽内异物', 'window', 30, 10, 'red', 'true')</l>
+<l>endif</l>
+<l>if(ret1+ret2+ret3+ret4==0)</l>
+<l>    set_display_font (WindowHandle, 20, 'mono', 'false', 'false')</l>
+<l>    disp_message(hwnd, 'OK-良品', 'window', 40, 30, 'blue', 'true')</l>
+<l>endif</l>
+<l>set_display_font (WindowHandle, 11, 'mono', 'false', 'false')</l>
+<c></c>
+<l>disp_message(200000, 'argv:'\
+                     +input_Scale_1+' '\
+                     +input_Scale_2+' '\
+                     +input_Scale_3+' '\
+                     +input_Scale_4+' '\
+                     +BaoLuoDiameterUp+' '\
+                     +BaoLuoDiameterDown+' '\
+                     +GouWidthUp+' '\
+                     +GouWidthDown+' '\
+, 'window', 0, 200, 'black', 'true')</l>
+<c></c>
+<l>disp_message(200000, '粘'+input_Scale_1+'宽'+input_Scale_1+'中'+input_Scale_1+'经'+input_Scale_1, \
+'window', 20, 0, 'black', 'true')</l>
+<c></c>
+<l>stop()</l>
+<l>return ()</l>
+<c></c>
+<c></c>
+<c></c>
+</body>
+<docu id="detectTop">
+<parameters>
+<parameter id="BaoLuoDiameterDown"/>
+<parameter id="BaoLuoDiameterUp"/>
+<parameter id="GouWidthDown"/>
+<parameter id="GouWidthUp"/>
+<parameter id="Image"/>
+<parameter id="Result"/>
+<parameter id="WindowHandle"/>
+<parameter id="input_Scale_1"/>
+<parameter id="input_Scale_2"/>
+<parameter id="input_Scale_3"/>
+<parameter id="input_Scale_4"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="fun1">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="region1" base_type="iconic" dimension="0"/>
+</oo>
+<ic>
+<par name="hwnd" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="ret1" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c></c>
+<l>ret1:=0</l>
+<l>graythreshold:=80</l>
+<l>areaoffset := 500000</l>
+<l>tongPianRadRadius:=998//铜片构成的圆的大致半径</l>
+<l>caoCount:=22//槽的数量</l>
+<c></c>
+<l>dev_set_color('green')</l>
+<l>get_window_extents(hwnd, Row, Column, Width, Height)</l>
+<l>get_image_size(Image, Width1, Height1)</l>
+<l>tuple_real(Width, Width)</l>
+<l>tuple_real(Height, Height)</l>
+<l>w:=Width1/Width</l>
+<l>h:=Height1/Height</l>
+<c></c>
+<l>gen_empty_region(EmptyRegion)</l>
+<c></c>
+<c>*提取槽区域</c>
+<l>threshold (Image, Regions, 0, graythreshold)</l>
+<l>connection(Regions, ConnectedRegions)</l>
+<l>select_shape_std(ConnectedRegions, SelectedRegions, 'max_area', 70)</l>
+<c>*面积判断</c>
+<l>region_features(SelectedRegions, 'area', areaValue)</l>
+<l>calculatedArea:=3.14*tongPianRadRadius*tongPianRadRadius</l>
+<l>if(areaValue&lt;calculatedArea-areaoffset or areaValue&gt;calculatedArea+areaoffset)</l>
+<l>    disp_message(hwnd, 'topfun1 选择整体区域面积eorror', 'window', (Height1-400)/h, 20, 'red', 'true')</l>
+<l>    ret1 := -1</l>
+<l>    return()</l>
+<l>endif</l>
+<l>closing_circle(SelectedRegions, RegionClosing, 50)</l>
+<l>fill_up(RegionClosing, RegionFillUp)</l>
+<l>opening_circle(RegionFillUp, RegionOpening1, 800)</l>
+<l>dilation_circle(RegionOpening1, RegionDilation, 4)</l>
+<l>area_center(RegionDilation, Area, Row0, Column0)</l>
+<c></c>
+<l>difference(RegionDilation, SelectedRegions, RegionDifference)</l>
+<l>closing_circle(RegionDifference, RegionClosing1, 5)</l>
+<l>opening_circle(RegionClosing1, RegionOpening, 10)</l>
+<l>connection(RegionOpening, ConnectedRegions1)</l>
+<l>select_shape (ConnectedRegions1, SelectedRegions1, 'area', 'and', 2000, 20000)</l>
+<c></c>
+<l>count_obj(SelectedRegions1,Number)</l>
+<l>if(Number!=caoCount)</l>
+<l>    disp_message(hwnd, 'topfun1 提取槽区域数量 ！='+caoCount, 'window', (Height1-400)/h, 20, 'red', 'true')</l>
+<l>    ret1 := -2</l>
+<l>    return()</l>
+<l>endif</l>
+<c></c>
+<c></c>
+<l>debugMark := 0</l>
+<c>*循环每个槽</c>
+<l>for Index := 1 to caoCount by 1</l>
+<l>    select_obj(SelectedRegions1, ObjectSelected, Index)</l>
+<c>    *确认每个槽的宽、高、面积</c>
+<l>    region_features(ObjectSelected, ['rect2_len1','rect2_len2','area'], Value)</l>
+<l>    if(Value[0]&gt;90 or Value[0]&lt;70)   </l>
+<l>        if(debugMark==1)</l>
+<l>            stop()</l>
+<l>        endif</l>
+<l>        concat_obj (ObjectSelected, EmptyRegion, EmptyRegion)</l>
+<l>    elseif(Value[1]&gt;29 or Value[1]&lt;20)  </l>
+<l>        if(debugMark==1)</l>
+<l>            stop()</l>
+<l>        endif</l>
+<l>        concat_obj (ObjectSelected, EmptyRegion, EmptyRegion)</l>
+<l>    elseif(Value[2]&gt;9000 or Value[2]&lt;6000)  </l>
+<l>        if(debugMark==1)</l>
+<l>            stop()</l>
+<l>        endif</l>
+<l>        concat_obj (ObjectSelected, EmptyRegion, EmptyRegion)</l>
+<l>    endif</l>
+<c>    </c>
+<c>    *阈值判断槽区域黑色区 毛刺高度</c>
+<l>    shape_trans(ObjectSelected, RegionTrans, 'rectangle2')</l>
+<l>    area_center(RegionTrans, Area1, Row1, Column1)</l>
+<l>    move_region(RegionTrans, RegionMoved, (Row1-Row0)*0.006, (Column1-Column0)*0.006)</l>
+<l>    *union2(RegionTrans, RegionMoved, RegionTrans)</l>
+<l>    region_features(RegionTrans, 'phi', phi)</l>
+<l>    if(Value[1]&lt;=18)</l>
+<l>        continue</l>
+<l>    endif</l>
+<l>    gen_rectangle2(Rectangle, 100, 100, phi, 0.5, (Value[1]-18))</l>
+<l>    erosion1(RegionMoved, Rectangle, RegionErosion, 1)</l>
+<l>    reduce_domain(Image, RegionErosion, ImageReduced)</l>
+<l>    threshold (ImageReduced, Regions1, 0, graythreshold+30)</l>
+<c>    </c>
+<l>    gen_rectangle2(Rectangle1, 100, 100, phi, 10, 2)</l>
+<l>    closing(Regions1, Rectangle1, RegionClosing2)</l>
+<c>    *如果中间最大黑色区域方向与槽方向接近，则可能是槽壁反光所致</c>
+<l>    connection(RegionClosing2, ConnectedRegions2)</l>
+<l>    select_shape_std(ConnectedRegions2, SelectedRegions2, 'max_area', 70)</l>
+<l>    region_features(SelectedRegions2, 'phi', maxRgnphi)</l>
+<l>    region_features(SelectedRegions2, 'rect2_len1', Value1)</l>
+<l>    region_features(SelectedRegions2, 'rect2_len2', Value2)</l>
+<l>    if(deg(phi)-20&lt;deg(maxRgnphi) and deg(maxRgnphi)&lt;deg(phi)+20)</l>
+<c>        *中间黑色区域 同向于槽方向 长和窄时，可能时反光区域</c>
+<l>        if(Value2&lt;8)</l>
+<l>            areathreshold := Value1*15+100</l>
+<l>        else</l>
+<l>            areathreshold := Value1*10-50</l>
+<l>        endif</l>
+<l>    elseif(deg(phi)-70&lt;deg(maxRgnphi) and deg(maxRgnphi)&lt;deg(phi)+110)</l>
+<c>        *中间黑色区域 垂直于槽方向 长和窄时，粘铜</c>
+<l>        areathreshold := Value2*20</l>
+<l>    else</l>
+<l>        if(Value2&lt;8)</l>
+<l>            areathreshold := Value1*10+80</l>
+<l>        else</l>
+<l>            areathreshold := Value1*10-50</l>
+<l>        endif</l>
+<l>    endif</l>
+<l>    if(areathreshold &lt; 60)</l>
+<l>        areathreshold:=60</l>
+<l>    endif</l>
+<l>    region_features(SelectedRegions2, 'area', areaValue1)</l>
+<l>    if(areaValue1&gt;areathreshold)</l>
+<c>        *判断是否为孤立的点，排除玻璃粘连污点</c>
+<l>        dilation_circle(SelectedRegions2, RegionDilation2, 30)</l>
+<l>        reduce_domain(Image, RegionDilation2, ImageReduced1)</l>
+<l>        threshold (ImageReduced1, Regions2, 200, 255)</l>
+<l>        connection(Regions2, ConnectedRegions3)</l>
+<l>        select_shape_std(ConnectedRegions3, SelectedRegions3, 'max_area', 70)</l>
+<l>        fill_up(SelectedRegions3, RegionFillUp1)</l>
+<l>        test_subset_region(SelectedRegions2, RegionFillUp1, IsSubset)</l>
+<c>        *如果外圈白区域围成一个圆，则斑点为大圆子集,为污点</c>
+<l>        if(IsSubset==0)</l>
+<c>            *现在（2019-4-12）焦点升高，污点灰度降低，且粘铜检测侧面稳定，可</c>
+<c>            *适度降低检测标准，以降低误判数量</c>
+<l>            reduce_domain(ImageReduced1, SelectedRegions2, ImageReduced2)</l>
+<l>            threshold (ImageReduced2, Regions3, 0, 80)</l>
+<l>            region_features(Regions3, 'area', Value3)</l>
+<l>            if(Value3&lt;60)</l>
+<l>                continue</l>
+<l>            endif</l>
+<l>            if(debugMark==1)</l>
+<l>                stop()</l>
+<l>            endif</l>
+<l>            concat_obj (RegionTrans, EmptyRegion, EmptyRegion)</l>
+<l>        endif</l>
+<l>    endif</l>
+<c>    </c>
+<l>endfor</l>
+<c></c>
+<l>union1(EmptyRegion, region1)</l>
+<l>region_features(region1, 'area', errorRgnArea)</l>
+<l>if(errorRgnArea&gt;0 and ret1==0)</l>
+<l>    ret1 := -10</l>
+<l>endif</l>
+<c></c>
+<l>dev_set_color('red')</l>
+<l>dev_set_line_width(2)</l>
+<l>dilation_circle(region1, RegionDilation1, 30)</l>
+<l>dev_display(RegionDilation1)</l>
+<l>dev_set_line_width(1)</l>
+<c>*hv_hwnd</c>
+<l>return ()</l>
+</body>
+<docu id="fun1">
+<parameters>
+<parameter id="Image"/>
+<parameter id="hwnd"/>
+<parameter id="region1"/>
+<parameter id="ret1"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="fun4">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="region4" base_type="iconic" dimension="0"/>
+</oo>
+<ic>
+<par name="hwnd" base_type="ctrl" dimension="0"/>
+<par name="input_Scale_1" base_type="ctrl" dimension="0"/>
+<par name="gouchangMin" base_type="ctrl" dimension="0"/>
+<par name="gouchangMax" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="ret4" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c></c>
+<l>ret4:=0</l>
+<l>graythreshold:=160</l>
+<l>areathreshold := 1500</l>
+<l>diameterMax := 2800</l>
+<l>diameterMin := 1365*2</l>
+<l>areaoffset := 500000</l>
+<l>tongPianRadRadius:=998//铜片构成的圆的大致半径</l>
+<l>gouCount:=22//钩的数量</l>
+<c></c>
+<c></c>
+<c></c>
+<l>dev_set_color('blue')</l>
+<l>get_window_extents(hwnd, Row, Column, Width, Height)</l>
+<l>get_image_size(Image, Width1, Height1)</l>
+<l>tuple_real(Width, Width)</l>
+<l>tuple_real(Height, Height)</l>
+<l>w:=Width1/Width</l>
+<l>h:=Height1/Height</l>
+<c></c>
+<l>gen_empty_region(EmptyRegion)</l>
+<c></c>
+<l>threshold (Image, Regions, 0, graythreshold)</l>
+<l>connection(Regions, ConnectedRegions)</l>
+<l>select_shape_std(ConnectedRegions, SelectedRegions, 'max_area', 70)</l>
+<c>*面积判断</c>
+<l>region_features(SelectedRegions, 'area', areaValue)</l>
+<l>calculatedArea:=3.14*tongPianRadRadius*tongPianRadRadius</l>
+<l>if(areaValue&lt;calculatedArea-areaoffset or areaValue&gt;calculatedArea+areaoffset)</l>
+<l>    disp_message(hwnd, 'topfun4 选择整体区域面积eorror', 'window', (Height1-400+300)/h, 20, 'red', 'true')</l>
+<l>    ret4 := -1</l>
+<l>    return()</l>
+<l>endif</l>
+<l>fill_up(SelectedRegions, RegionFillUp)</l>
+<l>reduce_domain(Image, RegionFillUp, ImageReduced)</l>
+<l>threshold (ImageReduced, Regions1, graythreshold, 255)</l>
+<l>connection(Regions1, ConnectedRegions1)</l>
+<l>select_shape_std(ConnectedRegions1, SelectedRegions2, 'max_area', 70)</l>
+<l>area_center(SelectedRegions2, Area, Row, Column)</l>
+<c>*2019-07-2改 有钩顶面反光造成白色 填充为黑色</c>
+<l>* dilation_circle(SelectedRegions2, RegionDilation, 80)</l>
+<l>* paint_region(RegionDilation, Image, ImageResult, 30, 'fill')</l>
+<c>**gen_circle(Circle0, Row, Column, 5)</c>
+<l>erosion_circle(RegionFillUp, RegionErosion, 30)</l>
+<l>paint_region(RegionErosion, Image, ImageResult, 10, 'fill')</l>
+<c></c>
+<l>gen_circle(Circle, Row, Column, tongPianRadRadius+27)</l>
+<l>difference(SelectedRegions, Circle, RegionDifference)</l>
+<l>gen_region_points(Region0, Row, Column)</l>
+<c></c>
+<l>opening_circle(RegionDifference, RegionOpening, 8)</l>
+<l>connection(RegionOpening, ConnectedRegions2)</l>
+<l>select_shape (ConnectedRegions2, ConnectedRegions2, 'area', 'and', 9000, 28000)</l>
+<l>count_obj(ConnectedRegions2, Number)</l>
+<l>circleTimes :=gouCount/2</l>
+<l>if(Number!=gouCount)</l>
+<l>    disp_message(hwnd, 'topfun4 提取钩部区域数量 ！='+gouCount, 'window', (Height1-400+300)/h, 20, 'red', 'true')</l>
+<l>    ret4 := -2</l>
+<l>    if(Number%2=1)</l>
+<l>        circleTimes := (Number+1)/2</l>
+<l>    endif</l>
+<l>    *return()</l>
+<l>endif</l>
+<c></c>
+<c>    </c>
+<c>    </c>
+<l>opening_circle(RegionFillUp, RegionOpening1, 800)</l>
+<c>    </c>
+<l>gen_circle(CircleSTD0, Row, Column, tongPianRadRadius-2)</l>
+<l>gen_circle(CircleSTD1, Row, Column, tongPianRadRadius+202)</l>
+<c></c>
+<l>dev_display(CircleSTD1)</l>
+<c></c>
+<l>twoOutGouDiameterChangedAll:=[]</l>
+<l>GouRadiusRight:=[]</l>
+<l>GouRadiusLeft:=[]</l>
+<l>gen_empty_region(gouRadiusLineRight)</l>
+<l>gen_empty_region(gouRadiusLineLeft)</l>
+<c></c>
+<c></c>
+<c></c>
+<l>select_obj(ConnectedRegions2, ObjectSelected1, 1)</l>
+<l>shape_trans(ObjectSelected1, RegionTrans, 'outer_circle')</l>
+<l>dilation_circle(RegionTrans, circleMudle, 50)</l>
+<c></c>
+<l>for Index := 1 to circleTimes by 1</l>
+<l>    hom_mat2d_identity (HomMat2DIdentity)</l>
+<l>    hom_mat2d_rotate (HomMat2DIdentity, -rad(360/22*(Index-1)), Row,Column,  HomMat2DRotate)</l>
+<l>    affine_trans_region(circleMudle, GouOuterCircle0, HomMat2DRotate, 'constant')</l>
+<c>    </c>
+<l>    hom_mat2d_identity (HomMat2DIdentity)</l>
+<l>    hom_mat2d_rotate (HomMat2DIdentity, rad(180), Row,Column,  HomMat2DRotate)</l>
+<l>    affine_trans_region(GouOuterCircle0, GouOuterCircle1, HomMat2DRotate, 'constant')</l>
+<c>    </c>
+<l>    union2(GouOuterCircle0, GouOuterCircle1, GouOuterCircle)</l>
+<l>    intersection(GouOuterCircle, ConnectedRegions2, TwoSymmetryGous)</l>
+<l>    region_features(TwoSymmetryGous, 'area', TwoSymmetryGousArea)</l>
+<l>    if(TwoSymmetryGousArea&lt;22000)</l>
+<l>        disp_message(hwnd, 'topfun4 未找到对称区域', 'window', (Height1-400+300)/h, 20, 'red', 'true')</l>
+<l>        ret4 := -3</l>
+<l>    endif</l>
+<l>    shape_trans(TwoSymmetryGous, TwoSymmetryGousConvex, 'convex')</l>
+<l>    opening_circle(TwoSymmetryGousConvex, TwoSymmetryGousOpened, 30)</l>
+<l>    region_features(TwoSymmetryGousOpened, 'max_diameter', twoOutGouDiameter)</l>
+<c>    </c>
+<c>    *矫正</c>
+<l>*     intersection(TwoSymmetryGousConvex, RegionOpening1, RegionIntersection1)</l>
+<l>*     region_features(RegionIntersection1, 'max_diameter', Value)</l>
+<l>*     JiaoZhengValue:=994*2-Value</l>
+<l>    JiaoZhengValue:=0</l>
+<c>    </c>
+<c>    *半径线条及其长度</c>
+<c>    *right-up</c>
+<l>    intersection(TwoSymmetryGous, GouOuterCircle0, RegionIntersection)</l>
+<l>    area_center(RegionIntersection, Area1, Row1, Column1)</l>
+<l>    aaa:=Row-Row1</l>
+<l>    bbb:=Column-Column1</l>
+<l>    tuple_sqrt ((aaa)*(aaa)+(bbb)*(bbb), cccc)</l>
+<l>    sina:=(aaa)/cccc</l>
+<l>    cosa:=(bbb)/cccc</l>
+<l>    rowOffset:=1250*sina</l>
+<l>    columnOffset:=1250*cosa</l>
+<l>    rowDispPoint:=Row-rowOffset</l>
+<l>    columnDispPoint:=Column-columnOffset</l>
+<l>    gen_region_line(RegionLines, Row, Column, rowDispPoint, columnDispPoint)</l>
+<l>    intersection(RegionLines, TwoSymmetryGousOpened, RegionIntersectionRight)</l>
+<l>    if(Index == 1)</l>
+<l>        union1(RegionIntersectionRight, gouRadiusLineRight)</l>
+<l>    else</l>
+<l>        concat_obj(gouRadiusLineRight, RegionIntersectionRight, gouRadiusLineRight)</l>
+<l>    endif</l>
+<l>    region_features(RegionIntersectionRight, 'max_diameter', Value1)</l>
+<l>    GouRadiusRight:=[GouRadiusRight,Value1]</l>
+<c>    </c>
+<c>    </c>
+<c>    *left-down</c>
+<l>    intersection(TwoSymmetryGous, GouOuterCircle1, RegionIntersection)</l>
+<l>    area_center(RegionIntersection, Area1, Row1, Column1)</l>
+<l>    aaa:=Row-Row1</l>
+<l>    bbb:=Column-Column1</l>
+<l>    tuple_sqrt ((aaa)*(aaa)+(bbb)*(bbb), cccc)</l>
+<l>    sina:=(aaa)/cccc</l>
+<l>    cosa:=(bbb)/cccc</l>
+<l>    rowOffset:=1250*sina</l>
+<l>    columnOffset:=1250*cosa</l>
+<l>    rowDispPoint:=Row-rowOffset</l>
+<l>    columnDispPoint:=Column-columnOffset</l>
+<l>    gen_region_line(RegionLines, Row, Column, rowDispPoint, columnDispPoint)    </l>
+<l>    intersection(RegionLines, TwoSymmetryGousOpened, RegionIntersectionLeft)</l>
+<l>    if(Index == 1)</l>
+<l>        union1(RegionIntersectionLeft, gouRadiusLineLeft)</l>
+<l>    else</l>
+<l>        concat_obj(gouRadiusLineLeft, RegionIntersectionLeft, gouRadiusLineLeft)</l>
+<l>    endif</l>
+<l>    region_features(RegionIntersectionLeft, 'max_diameter', Value1)</l>
+<l>    GouRadiusLeft:=[GouRadiusLeft,Value1]</l>
+<c></c>
+<l>    union2(RegionIntersectionRight, RegionIntersectionLeft, diameterRegion1)</l>
+<c></c>
+<c>    *直径长度判断</c>
+<l>    twoOutGouDiameterChanged :=( twoOutGouDiameter + JiaoZhengValue+0.0)* input_Scale_1*0.011736</l>
+<l>    if(twoOutGouDiameterChanged&lt;gouchangMin-0.01 or twoOutGouDiameterChanged&gt;gouchangMax+0.01)</l>
+<l>        msgShowColor := 'red'</l>
+<l>        concat_obj(EmptyRegion, diameterRegion1, EmptyRegion)</l>
+<l>    else</l>
+<l>        if(gouchangMin-twoOutGouDiameterChanged&lt;=0.01 and gouchangMin-twoOutGouDiameterChanged&gt;0)</l>
+<l>            twoOutGouDiameterChanged := gouchangMin</l>
+<l>        elseif(twoOutGouDiameterChanged-gouchangMax&lt;=0.01 and twoOutGouDiameterChanged-gouchangMax&gt;0)</l>
+<l>            twoOutGouDiameterChanged := gouchangMax</l>
+<l>        endif</l>
+<l>        dev_set_color('green')</l>
+<l>        msgShowColor := 'blue'</l>
+<l>        dev_display(diameterRegion1)</l>
+<l>    endif</l>
+<l>    twoOutGouDiameterChangedAll:=[twoOutGouDiameterChangedAll,twoOutGouDiameterChanged]</l>
+<c>    </c>
+<c>    </c>
+<c>    *外径数值显示</c>
+<l>    area_center(GouOuterCircle0, Area3, Row3, Column3)</l>
+<l>    tuple_sqrt ((Row-Row3)*(Row-Row3)+(Column-Column3)*(Column-Column3), cccc)</l>
+<l>    sina:=(Row-Row3)/cccc</l>
+<l>    cosa:=(Column-Column3)/cccc</l>
+<l>    rowOffset:=1250*sina</l>
+<l>    columnOffset:=1250*cosa+Index*6</l>
+<l>    rowDispPoint:=Row-rowOffset-30</l>
+<l>    columnDispPoint:=Column-columnOffset</l>
+<c>    </c>
+<c>    </c>
+<l>    SZtwoOutGouDiameterChanged := twoOutGouDiameterChanged$'.4'</l>
+<l>    SZJiaoZhengValue := JiaoZhengValue$'.3'</l>
+<l>    disp_message(hwnd, (SZtwoOutGouDiameterChanged)+' ' +SZJiaoZhengValue, 'window', (rowDispPoint)/h, \
+                     (columnDispPoint)/w, msgShowColor, 'false')</l>
+<l>endfor</l>
+<c></c>
+<c>*当直径大于且靠近最小标准值时，与它相邻两半径都明显大于它时也判为凹角（钩外径小）</c>
+<l>union1(EmptyRegion, region4)</l>
+<l>region_features(region4, 'area', errorRgnArea)</l>
+<l>if(errorRgnArea==0 and ret4==0)</l>
+<l>    tuple_concat(GouRadiusRight, GouRadiusLeft, GouRadiusAll)</l>
+<l>    tuple_median(GouRadiusAll, GouRadiusMedian)</l>
+<l>    concat_obj(gouRadiusLineRight, gouRadiusLineLeft, gouRadiusLineAll)</l>
+<l>    for Index1 := 0 to gouCount-1 by 1</l>
+<l>        if(GouRadiusAll[Index1]&lt;GouRadiusMedian-5 or GouRadiusAll[Index1]&gt;GouRadiusMedian+5)</l>
+<l>            Index1Last:=(Index1-1+22)%22</l>
+<l>            Index1Next:=(Index1+1)%22</l>
+<l>            a205:=10</l>
+<l>            RadiusDifL:=GouRadiusAll[Index1]-GouRadiusAll[Index1Last]</l>
+<l>            RadiusDifN:=GouRadiusAll[Index1]-GouRadiusAll[Index1Next]</l>
+<l>            if(RadiusDifL&gt;a205 or\
+                RadiusDifL&lt;-a205 or\
+                RadiusDifN&gt;a205 or\
+                RadiusDifN&lt;-a205)</l>
+<l>                select_obj(gouRadiusLineAll, ObjectSelected, Index1+1)</l>
+<l>                concat_obj(EmptyRegion, ObjectSelected, EmptyRegion)</l>
+<l>                ret4 := -9</l>
+<l>            endif</l>
+<l>        endif</l>
+<l>    endfor</l>
+<l>endif</l>
+<c></c>
+<l>union1(EmptyRegion, region4)</l>
+<l>region_features(region4, 'area', errorRgnArea)</l>
+<l>if(errorRgnArea&gt;0 and ret4==0)</l>
+<l>    ret4 := -10</l>
+<l>endif</l>
+<l>if(ret4 == -9)</l>
+<l>    dev_set_color('magenta')</l>
+<l>else</l>
+<l>    dev_set_color('red')</l>
+<l>endif</l>
+<c></c>
+<l>dev_display(region4)</l>
+<c>*hv_hwnd</c>
+<l>return ()</l>
+<c></c>
+</body>
+<docu id="fun4">
+<parameters>
+<parameter id="Image"/>
+<parameter id="gouchangMax"/>
+<parameter id="gouchangMin"/>
+<parameter id="hwnd"/>
+<parameter id="input_Scale_1"/>
+<parameter id="region4"/>
+<parameter id="ret4"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="fun3">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+<par name="gouTopRegions" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="region3" base_type="iconic" dimension="0"/>
+</oo>
+<ic>
+<par name="hwnd" base_type="ctrl" dimension="0"/>
+<par name="GouTaoWide" base_type="ctrl" dimension="0"/>
+<par name="GouGouTaoIntersectionInner_radius" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="ret3" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c></c>
+<l>ret3:=0</l>
+<l>graythreshold:=160</l>
+<l>if (GouTaoWide&lt;=0)</l>
+<l>    GouTaoWide := 1</l>
+<l>endif</l>
+<l>tongPianRadRadius:=998//铜片构成的圆的大致半径</l>
+<l>gouCount:=22//钩的数量</l>
+<c></c>
+<c></c>
+<c></c>
+<l>dev_set_color('green')</l>
+<l>get_window_extents(hwnd, Row, Column, Width, Height)</l>
+<l>get_image_size(Image, Width1, Height1)</l>
+<l>tuple_real(Width, Width)</l>
+<l>tuple_real(Height, Height)</l>
+<l>w:=Width1/Width</l>
+<l>h:=Height1/Height</l>
+<c></c>
+<l>gen_empty_region(EmptyRegion)</l>
+<c></c>
+<c>*提取圆心，此处与其他几个函数不同，通过外圆确认圆心</c>
+<l>threshold (Image, Regions, 0, graythreshold)</l>
+<l>connection(Regions, ConnectedRegions)</l>
+<l>select_shape_std(ConnectedRegions, SelectedRegions, 'max_area', 70)</l>
+<l>fill_up(SelectedRegions, RegionFillUp)</l>
+<l>opening_circle(RegionFillUp, RegionOpening, 800)</l>
+<l>area_center(RegionOpening, Area, Row, Column)</l>
+<c></c>
+<c>*执行到此处时钩宽度一定合格</c>
+<c>*长度判断缩放阀值</c>
+<l>LengthJudgeNum := GouTaoWide</l>
+<c>*钩偏检测改良版，通过钩间距离（钩间区域的宽度）来判断还是不行，改用套钩工具的原理检测</c>
+<l>gen_circle(CircleCheckBase, Row, Column, tongPianRadRadius+102)</l>
+<l>dilation_circle(CircleCheckBase, CircleCheckBaseDilation, 110)</l>
+<l>difference(CircleCheckBaseDilation, CircleCheckBase, CircleCheckBaseCircle)</l>
+<l>connection(gouTopRegions, gouTopConnectedRegions)</l>
+<c></c>
+<c>*建立外框</c>
+<l>select_obj(gouTopConnectedRegions, ObjectSelectedBase, 1)</l>
+<l>area_center(ObjectSelectedBase, Area1, Row1, Column1)</l>
+<c></c>
+<l>tuple_sqrt ((Row-Row1)*(Row-Row1)+(Column-Column1)*(Column-Column1), cccc)</l>
+<c></c>
+<l>sina:=(Row-Row1)/cccc</l>
+<l>cosa:=(Column-Column1-10)/cccc//-x右旋幅度</l>
+<l>rowOffset:=1250*sina</l>
+<l>columnOffset:=1250*cosa</l>
+<c></c>
+<l>gen_region_line(RegionLinesBase, Row, Column, Row-rowOffset, Column-columnOffset)</l>
+<l>gen_empty_region(gouRegionSTD0)</l>
+<l>concat_obj(gouRegionSTD0, RegionLinesBase, gouRegionSTD0)</l>
+<l>for Index := 1 to gouCount-1 by 1</l>
+<l>    ratateNum:=rad(360)/22*Index</l>
+<l>    hom_mat2d_identity (HomMat2DIdentity)</l>
+<l>    hom_mat2d_rotate (HomMat2DIdentity, ratateNum, Row,Column,  HomMat2DRotate)</l>
+<l>    affine_trans_region(RegionLinesBase, RegionLinesBaseaffined, HomMat2DRotate, 'constant')</l>
+<l>    concat_obj(gouRegionSTD0, RegionLinesBaseaffined, gouRegionSTD0)</l>
+<l>endfor</l>
+<l>union1(gouRegionSTD0, gouRegionSTD1)</l>
+<l>difference(gouRegionSTD1, CircleCheckBase, RegionDifference)</l>
+<c>*钩套内孔宽度</c>
+<l>dilation_circle(RegionDifference, gouTaoBaseIn, GouTaoWide)</l>
+<l>dilation_circle(gouTaoBaseIn, gouTaoBaseOut, 20)</l>
+<l>difference(gouTaoBaseOut, gouTaoBaseIn, gouTaoOutCircle)</l>
+<l>intersection(gouTaoOutCircle, CircleCheckBaseCircle, gouTao)</l>
+<c></c>
+<l>isOkMark:=0</l>
+<l>isDebugMark:=  0</l>
+<l>gen_empty_region(useToShow)</l>
+<l>for Index := 0 to 1.2 by 0.05</l>
+<l>    ratateNum:=rad(Index)</l>
+<l>    hom_mat2d_identity (HomMat2DIdentity)</l>
+<l>    hom_mat2d_rotate (HomMat2DIdentity, ratateNum, Row,Column,  HomMat2DRotate)</l>
+<l>    affine_trans_region(gouTao, gouTaoNow, HomMat2DRotate, 'nearest_neighbor')</l>
+<c></c>
+<l>    reduce_domain(Image, gouTaoNow, ImageReduced)</l>
+<l>    threshold (ImageReduced, Regions1, 0, 150)</l>
+<l>    connection(Regions1, ConnectedRegions1)</l>
+<l>    region_features(ConnectedRegions1, 'inner_radius', ValueIR)</l>
+<l>    tuple_max(ValueIR, Max)</l>
+<l>    if(Max&gt;=GouGouTaoIntersectionInner_radius)</l>
+<l>        tuple_find(ValueIR, Max, Indices)</l>
+<l>        select_obj(ConnectedRegions1, SelectedRegions1, Indices+1)</l>
+<l>        select_shape_std(SelectedRegions1, SelectedRegions1, 'max_area', 70)</l>
+<l>    else</l>
+<l>        select_shape_std(ConnectedRegions1, SelectedRegions1, 'max_area', 70)</l>
+<l>    endif</l>
+<l>    region_features(SelectedRegions1, ['area','inner_radius','max_diameter'], Value)</l>
+<c></c>
+<l>     if(isDebugMark)</l>
+<l>        dev_clear_window()</l>
+<l>        dev_set_color('green')</l>
+<l>        dev_display(Image)</l>
+<l>        dev_display(gouTaoNow)</l>
+<l>        dev_set_color('red')</l>
+<l>        dilation_circle(SelectedRegions1, RegionDilation, 15)</l>
+<l>        dev_display(RegionDilation)</l>
+<l>        stop()</l>
+<l>    endif</l>
+<c>    *判断</c>
+<l>    if(Value[0]&lt;200 and Value[1]&lt;GouGouTaoIntersectionInner_radius and Value[2]&lt;70)</l>
+<l>        isOkMark:=1</l>
+<l>        if(isDebugMark)</l>
+<l>            disp_message(hwnd, '钩居中,退出循环------&gt;&gt;&gt;&gt;&gt;', 'window', (Height1-400+100)/h, 20, 'blue', 'true')</l>
+<l>            stop()</l>
+<l>        endif</l>
+<c>        </c>
+<l>        disp_message(hwnd, 'topfun3 钩套交Msg area/inR/D='+Value[0]+'/'+Value[1]+'/'+Value[2], 'window', (Height1-400+100)/h, 20, 'blue', 'true')</l>
+<l>        break</l>
+<l>    endif</l>
+<l>endfor</l>
+<c></c>
+<l>if(isDebugMark)</l>
+<l>    disp_message(hwnd, '退出循环------&gt;&gt;&gt;&gt;&gt;', 'window', (Height1-400+100)/h, 20, 'blue', 'true')</l>
+<l>    stop()</l>
+<l>endif</l>
+<c></c>
+<l>if(isOkMark==0)</l>
+<l>    ratateNum:=rad(0.5)</l>
+<l>    hom_mat2d_identity (HomMat2DIdentity)</l>
+<l>    hom_mat2d_rotate (HomMat2DIdentity, ratateNum, Row,Column,  HomMat2DRotate)</l>
+<l>    affine_trans_region(gouTao, useToShow, HomMat2DRotate, 'nearest_neighbor')</l>
+<c>    </c>
+<l>    concat_obj(EmptyRegion, useToShow, EmptyRegion)</l>
+<l>    *disp_message(hwnd, 'topfun3 钩不居中', 'window', (Height1-400+100)/h, 20, 'red', 'true')</l>
+<l>    *ret3 := -1</l>
+<l>    *return()</l>
+<l>endif</l>
+<c></c>
+<l>union1(EmptyRegion, region3)</l>
+<l>region_features(region3, 'area', errorRgnArea)</l>
+<l>if(errorRgnArea&gt;0 and ret3==0)</l>
+<l>    ret3 := -10</l>
+<l>    dev_set_color('red')</l>
+<l>    dev_display(region3)</l>
+<l>endif</l>
+<c>*hv_hwnd</c>
+<l>return ()</l>
+</body>
+<docu id="fun3">
+<parameters>
+<parameter id="GouGouTaoIntersectionInner_radius"/>
+<parameter id="GouTaoWide"/>
+<parameter id="Image"/>
+<parameter id="gouTopRegions"/>
+<parameter id="hwnd"/>
+<parameter id="region3"/>
+<parameter id="ret3"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="fun2">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="gouTopRegions" base_type="iconic" dimension="0"/>
+<par name="region2" base_type="iconic" dimension="0"/>
+</oo>
+<ic>
+<par name="hwnd" base_type="ctrl" dimension="0"/>
+<par name="goukuanMin" base_type="ctrl" dimension="0"/>
+<par name="goukuanMax" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="ret2" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c></c>
+<l>ret2:=0</l>
+<l>graythreshold:=160</l>
+<l>areathreshold := 1500</l>
+<l>areaoffset := 500000</l>
+<l>goukuanoffset := 15</l>
+<l>tongPianRadRadius:=998//铜片构成的圆的大致半径</l>
+<l>gouCount:=22//钩的数量</l>
+<c></c>
+<l>dev_set_color('green')</l>
+<l>get_window_extents(hwnd, Row, Column, Width, Height)</l>
+<l>get_image_size(Image, Width1, Height1)</l>
+<l>tuple_real(Width, Width)</l>
+<l>tuple_real(Height, Height)</l>
+<l>w:=Width1/Width</l>
+<l>h:=Height1/Height</l>
+<c></c>
+<l>gen_empty_region(EmptyRegion)</l>
+<c></c>
+<l>threshold (Image, Regions, 0, graythreshold)</l>
+<l>connection(Regions, ConnectedRegions)</l>
+<l>select_shape_std(ConnectedRegions, SelectedRegions, 'max_area', 70)</l>
+<c>*面积判断</c>
+<l>region_features(SelectedRegions, 'area', areaValue)</l>
+<l>calculatedArea:=3.14*tongPianRadRadius*tongPianRadRadius</l>
+<l>if(areaValue&lt;calculatedArea-areaoffset or areaValue&gt;calculatedArea+areaoffset)</l>
+<l>    disp_message(hwnd, 'topfun2 选择整体区域面积eorror', 'window', (Height1-400+100)/h, 20, 'red', 'true')</l>
+<l>    ret2 := -1</l>
+<l>    return()</l>
+<l>endif</l>
+<l>fill_up(SelectedRegions, RegionFillUp)</l>
+<l>reduce_domain(Image, RegionFillUp, ImageReduced)</l>
+<l>threshold (ImageReduced, Regions1, graythreshold, 255)</l>
+<l>connection(Regions1, ConnectedRegions1)</l>
+<l>select_shape_std(ConnectedRegions1, SelectedRegions2, 'max_area', 70)</l>
+<l>area_center(SelectedRegions2, Area, Row, Column)</l>
+<l>gen_region_points(Region0, Row, Column)</l>
+<l>gen_circle(Circle, Row, Column, tongPianRadRadius+112)</l>
+<c></c>
+<l>difference(SelectedRegions, Circle, RegionDifference)</l>
+<l>opening_circle(RegionDifference, RegionOpening, 9)</l>
+<l>connection(RegionOpening, ConnectedRegions2)</l>
+<l>select_shape (ConnectedRegions2, ConnectedRegions2, 'area', 'and', 1500, 12000)</l>
+<l>count_obj(ConnectedRegions2, Number)</l>
+<l>if(Number!=gouCount)</l>
+<l>    disp_message(hwnd, 'topfun2 提取钩顶区域数量 ！='+gouCount, 'window', (Height1-400+100)/h, 20, 'red', 'true')</l>
+<l>    ret2 := -2</l>
+<l>    return()</l>
+<l>endif</l>
+<l>union1(ConnectedRegions2, gouTopRegions)//返回钩顶区域供钩偏检测使用 </l>
+<c></c>
+<l>erosion_circle(Circle, RegionErosion1, 70)</l>
+<l>erosion_circle(Circle, RegionErosion2, 125)</l>
+<l>difference(RegionErosion1, RegionErosion2, RegionDifference1)</l>
+<l>reduce_domain(Image, RegionDifference1, ImageReduced1)</l>
+<l>threshold (ImageReduced1, Regions2, 0, 120)</l>
+<l>opening_circle(Regions2, RegionOpening1, 20)</l>
+<l>connection(RegionOpening1, ConnectedRegions3)</l>
+<l>select_shape (ConnectedRegions3, ConnectedRegions3, 'area', 'and', 4000, 7000)</l>
+<l>count_obj(ConnectedRegions3, Number1)</l>
+<l>if(Number1!=gouCount)</l>
+<l>    disp_message(hwnd, 'topfun2 提取钩跟区域数量 ！='+gouCount, 'window', (Height1-400+100)/h, 20, 'red', 'true')</l>
+<l>    ret2 := -3</l>
+<l>    return()</l>
+<l>endif</l>
+<c></c>
+<c>*钩宽范围判断</c>
+<l>tuple0:=[]</l>
+<l>tuple1:=[]</l>
+<c></c>
+<l>for Index := 1 to gouCount by 1</l>
+<c>    *钩顶宽</c>
+<l>    select_obj(ConnectedRegions2, ObjectSelected, Index)</l>
+<l>    union2(ObjectSelected, Region0, RegionUnion)</l>
+<l>    region_features(RegionUnion, 'rect2_len2', len2Value)</l>
+<l>    *len2Value := round(len2Value)*2*0.011736//不应该用round</l>
+<l>    len2Value := len2Value*2*0.011736</l>
+<l>    tuple0:=[len2Value,tuple0]</l>
+<l>    errClear:=0.05</l>
+<l>    if(len2Value&lt;goukuanMin-errClear or len2Value&gt;goukuanMax+errClear )</l>
+<l>        concat_obj(EmptyRegion, ObjectSelected, EmptyRegion)</l>
+<l>    endif</l>
+<c>    *钩底宽</c>
+<l>    select_obj(ConnectedRegions3, ObjectSelected, Index)</l>
+<l>    union2(ObjectSelected, Region0, RegionUnion)</l>
+<l>    region_features(RegionUnion, 'rect2_len2', len2Value)</l>
+<l>    len2Value := round(len2Value)*2*0.011736</l>
+<l>    tuple1:=[len2Value,tuple1]</l>
+<l>    if(len2Value&lt;goukuanMin-errClear+0.12 or len2Value&gt;goukuanMax+errClear+0.25 )</l>
+<l>        concat_obj(EmptyRegion, ObjectSelected, EmptyRegion)</l>
+<l>    endif</l>
+<l>endfor</l>
+<c></c>
+<l>union1(EmptyRegion, region2)</l>
+<l>region_features(region2, 'area', errorRgnArea)</l>
+<l>if(errorRgnArea&gt;0 and ret2==0)</l>
+<l>    ret2 := -10</l>
+<l>endif</l>
+<c></c>
+<l>dev_set_color('red')</l>
+<l>dev_display(region2)</l>
+<c>*hv_hwnd</c>
+<l>return ()</l>
+</body>
+<docu id="fun2">
+<parameters>
+<parameter id="Image"/>
+<parameter id="gouTopRegions"/>
+<parameter id="goukuanMax"/>
+<parameter id="goukuanMin"/>
+<parameter id="hwnd"/>
+<parameter id="region2"/>
+<parameter id="ret2"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="detectSide">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+</io>
+<ic>
+<par name="WindowHandle" base_type="ctrl" dimension="0"/>
+<par name="input_Scale_1Goupian" base_type="ctrl" dimension="0"/>
+<par name="input_Scale_2" base_type="ctrl" dimension="0"/>
+<par name="input_Scale_3" base_type="ctrl" dimension="0"/>
+<par name="input_Scale_4" base_type="ctrl" dimension="0"/>
+<par name="CaoWidthUp" base_type="ctrl" dimension="0"/>
+<par name="CaoWidthDown" base_type="ctrl" dimension="0"/>
+<par name="MaociWidth" base_type="ctrl" dimension="0"/>
+<par name="MaociHeight" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="Result" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c></c>
+<c></c>
+<l>*Result := ret1+ret2+ret3+ret4</l>
+<c>* 		output_Result 输出结果定义：</c>
+<c>* 		static const int Good				= 0x00;</c>
+<c>* 		static const int Bad					= 0x01;</c>
+<c>* 		static const int Gou					= 0x02;</c>
+<c>* 		static const int Cao					= 0x03;</c>
+<c>* 		static const int Liantong			= 0x04;</c>
+<c></c>
+<c></c>
+<c></c>
+<l>dev_update_off()</l>
+<l>dev_set_draw('margin')</l>
+<l>dev_set_line_width(1)</l>
+<c></c>
+<l>SideCHH_PingJie(Image, ImagePJ,1080, 2, 0, 200, DownRow)</l>
+<c></c>
+<l>ret1:=0</l>
+<l>ret2:=0</l>
+<l>ret3:=0</l>
+<l>ret4:=0</l>
+<l>ret5:=0</l>
+<l>hwnd :=200000</l>
+<l>dev_display(ImagePJ)</l>
+<c></c>
+<l>disp_message (200000, 'argv:'+input_Scale_1Goupian+' '+input_Scale_2+' '+input_Scale_3+' ' +input_Scale_4+' ' +CaoWidthUp+' '  +CaoWidthDown+' ' +MaociWidth+' '+MaociHeight, 'window', 0, 200, 'black', 'true')</l>
+<l>disp_message (200000, '宽'+input_Scale_1Goupian+'粘'+input_Scale_1Goupian+'碰'+input_Scale_1Goupian+'高'+input_Scale_1Goupian+'中'+input_Scale_1Goupian, 'window', 20, 200, 'black', 'true')</l>
+<c></c>
+<c>*槽宽、槽连续</c>
+<l>Sidefun1 (ImagePJ, region1, outRegion1, WindowHandle, CaoWidthDown, CaoWidthUp, ret1)</l>
+<l>if(ret1==0 or ret1==-10)</l>
+<c>    *毛刺、粘铜</c>
+<l>    Sidefun2 (ImagePJ, outRegion1, region2, WindowHandle, MaociWidth, MaociHeight, ret2)</l>
+<c>    </c>
+<c>    *片区大划伤、生锈</c>
+<l>    Sidefun3 (ImagePJ, outRegion1, region3, WindowHandle, input_Scale_2, ret3)</l>
+<c>    </c>
+<c>    *钩顶到换向器底部距离（钩右极限位置）  + 钩偏（返回值：钩高度不良ret4&lt;0, 钩偏ret5&lt;0）</c>
+<l>    Sidefun4 (ImagePJ, outRegion1, region4, input_Scale_1Goupian, WindowHandle, ret4, ret5)</l>
+<c>    </c>
+<c>     *对钩居中的检测（肩上方区域黑色宽度）</c>
+<l>*     Sidefun5 (ImagePJ, outRegion1, region5, WindowHandle, input_Scale_1Goupian, ret5)</l>
+<l>endif</l>
+<c>***此处第二版粘铜区分下料注意注意：同时有多种不良时最后反馈结果为粘铜</c>
+<c>***2个工位检测有多种不良结果时，最后反应为粘铜</c>
+<l>Result := 0</l>
+<l>set_display_font (WindowHandle, 14, 'mono', 'true', 'false')</l>
+<l>if(ret1&lt;0)</l>
+<l>    Result := 3</l>
+<l>    disp_message(hwnd, 'NG 槽宽度', 'window', 30, 30, 'red', 'true')</l>
+<l>endif</l>
+<l>if(ret3&lt;0)</l>
+<l>    Result := 1</l>
+<l>    disp_message(hwnd, 'NG 大碰伤划伤、生锈', 'window', 90, 30, 'red', 'true')</l>
+<l>endif</l>
+<l>if(ret4&lt;0)</l>
+<l>    Result := 2</l>
+<l>    disp_message(hwnd, 'NG 钩高度', 'window', 120, 30, 'red', 'true')</l>
+<l>endif</l>
+<l>if(ret5&lt;0)</l>
+<l>    Result := 2</l>
+<l>    disp_message(hwnd, 'NG 钩不居中', 'window', 150, 30, 'red', 'true')</l>
+<l>endif</l>
+<l>if(ret2&lt;0)</l>
+<l>    Result := 4</l>
+<l>    disp_message(hwnd, 'NG 槽内异物', 'window', 60, 30, 'red', 'true')</l>
+<l>endif</l>
+<c>*槽内被粘铜堵住导致槽不连续，不进行粘铜检测情况也判位粘铜</c>
+<l>if(ret1==-2 or ret1==-3)</l>
+<l>    Result := 4</l>
+<l>endif</l>
+<l>if(ret1+ret2+ret3+ret4+ret5==0)</l>
+<l>    set_display_font (WindowHandle, 20, 'mono', 'false', 'false')</l>
+<l>    disp_message(hwnd, 'OK-良品', 'window', 40, 30, 'blue', 'true')</l>
+<l>endif</l>
+<l>set_display_font (WindowHandle, 11, 'mono', 'false', 'false')</l>
+<c></c>
+<l>stop()</l>
+<l>return ()</l>
+</body>
+<docu id="detectSide">
+<parameters>
+<parameter id="CaoWidthDown"/>
+<parameter id="CaoWidthUp"/>
+<parameter id="Image"/>
+<parameter id="MaociHeight"/>
+<parameter id="MaociWidth"/>
+<parameter id="Result"/>
+<parameter id="WindowHandle"/>
+<parameter id="input_Scale_1Goupian"/>
+<parameter id="input_Scale_2"/>
+<parameter id="input_Scale_3"/>
+<parameter id="input_Scale_4"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="SideCHH_PingJie">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="TileImage" base_type="iconic" dimension="0"/>
+</oo>
+<ic>
+<par name="MearsureColCenter" base_type="ctrl" dimension="0"/>
+<par name="EdgeOffset" base_type="ctrl" dimension="0"/>
+<par name="Offset" base_type="ctrl" dimension="0"/>
+<par name="HorProjectionGrayVal" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="DownRow" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c></c>
+<l>get_image_size(Image, Width, Height)</l>
+<c></c>
+<l>    TmpCtrl_Row:=800</l>
+<l>*     MearsureColCenter := 900</l>
+<l>    TmpCtrl_Phi := rad(0)</l>
+<l>    TmpCtrl_Len1 := 500</l>
+<l>    TmpCtrl_Len2 := 800</l>
+<c>    *******</c>
+<l>    *gen_rectangle2 (Rectangle, TmpCtrl_Row, MearsureColCenter, TmpCtrl_Phi, TmpCtrl_Len1, TmpCtrl_Len2)</l>
+<l>    gen_rectangle1 (Rectangle, 0, 793.5, 1605.5, 1420)</l>
+<l>    gray_projections (Rectangle, Image, 'simple', HorProjection, VertProjection)</l>
+<c>    </c>
+<c>    ****************</c>
+<c>    *HorProjectionGrayVal 传入的参数</c>
+<l>     for Index := 0 to |HorProjection| by 1</l>
+<l>        if(HorProjection[Index]&lt;HorProjectionGrayVal)</l>
+<l>            Index:=Index+EdgeOffset</l>
+<l>            if(Index&gt;|HorProjection|-1)</l>
+<l>                return()</l>
+<l>            endif</l>
+<l>            if(HorProjection[Index]&lt;HorProjectionGrayVal)</l>
+<l>                break</l>
+<l>            endif</l>
+<l>        endif</l>
+<l>        if(Index==|HorProjection|-1)</l>
+<l>            break</l>
+<l>        endif</l>
+<l>    endfor</l>
+<c>    </c>
+<l>    CutRow:=Index</l>
+<l>    if(CutRow&lt;=100)</l>
+<l>        CutRow:=CutRow+30+125</l>
+<l>    elseif(CutRow&gt;100 and CutRow&lt;240)</l>
+<l>        CutRow:=CutRow-100</l>
+<l>    else</l>
+<l>        CutRow := CutRow-180</l>
+<l>    endif</l>
+<l>    crop_rectangle1 (Image, ImagePartdown, CutRow, 0, Height-1,Width-1)</l>
+<l>    crop_rectangle1 (Image, ImagePartup, 0, 0, CutRow-1+Offset, Width-1)   </l>
+<l>    gen_empty_obj(Images)</l>
+<l>    concat_obj(Images, ImagePartdown, Images)</l>
+<l>    concat_obj(Images, ImagePartup, Images)</l>
+<l>    DownRow:=Height-CutRow-Offset</l>
+<l>    tile_images_offset (Images, TileImage, [0,DownRow], [0,0], [-1,-1], [-1,-1], [-1,-1], [-1,-1], Width, Height)</l>
+<c></c>
+<c></c>
+<c></c>
+<l>return ()</l>
+</body>
+<docu id="SideCHH_PingJie">
+<parameters>
+<parameter id="DownRow"/>
+<parameter id="EdgeOffset"/>
+<parameter id="HorProjectionGrayVal"/>
+<parameter id="Image"/>
+<parameter id="MearsureColCenter"/>
+<parameter id="Offset"/>
+<parameter id="TileImage"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="Sidefun1">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="region1" base_type="iconic" dimension="0"/>
+<par name="outRegion1" base_type="iconic" dimension="0"/>
+</oo>
+<ic>
+<par name="hwnd" base_type="ctrl" dimension="0"/>
+<par name="CaoWidthMin" base_type="ctrl" dimension="0"/>
+<par name="CaoWidthMax" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="ret1" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c></c>
+<c></c>
+<l>ret1:=0</l>
+<c>*单片高度,用于判断槽的连续性</c>
+<l>chipHeight :=240</l>
+<l>chipWidth0:=950</l>
+<l>dev_set_color('green')</l>
+<c></c>
+<l>get_window_extents(hwnd, Row, Column, Width, Height)</l>
+<l>get_image_size(Image, Width1, Height1)</l>
+<l>tuple_real(Width, Width)</l>
+<l>tuple_real(Height, Height)</l>
+<l>w:=Width1/Width</l>
+<l>h:=Height1/Height</l>
+<c></c>
+<l>gen_empty_region(EmptyRegion)</l>
+<l>gen_empty_region(outEmptyRegion)</l>
+<c></c>
+<l>gen_rectangle1 (ROI_0, 21.5, 21.5, 2277.5, 2009.5)</l>
+<l>reduce_domain(Image, ROI_0, ImageReduced1)</l>
+<l>threshold (ImageReduced1, Regions1, 137, 255)</l>
+<l>closing_rectangle1(Regions1, RegionClosing2, 20, 150)</l>
+<l>opening_rectangle1(RegionClosing2, RegionOpening3, 500, 500)</l>
+<l>region_features(RegionOpening3, 'column2', PianColumn2)</l>
+<l>if(0==PianColumn2 or PianColumn2&gt;1900)</l>
+<l>    disp_message(hwnd, 'sidefun1 初步提取片区column1 error', 'window', (900)/h, 30, 'red', 'false')</l>
+<l>    ret1 := -1</l>
+<l>    return()</l>
+<l>endif</l>
+<c></c>
+<l>gen_rectangle1(RectangleAllPian, 0, PianColumn2-925, Height1-chipHeight, PianColumn2)</l>
+<l>reduce_domain(Image, RectangleAllPian, ImageReduced)</l>
+<l>threshold (ImageReduced, Regions, 0, 150)</l>
+<l>closing_circle(Regions, RegionClosing1, 3.5)</l>
+<l>opening_rectangle1(RegionClosing1, RegionOpening, 50, 10)</l>
+<l>fill_up(RegionOpening, RegionFillUp)</l>
+<l>closing_rectangle1(RegionOpening, RegionClosing, 50, 10)</l>
+<l>opening_rectangle1(RegionClosing, RegionOpening1, 500, 10)</l>
+<l>connection(RegionOpening1, ConnectedRegions)</l>
+<c></c>
+<l>select_shape (ConnectedRegions, SelectedRegions, 'area', 'and', 40093.5, 99345.8)</l>
+<l>count_obj(SelectedRegions, Number)</l>
+<l>if(Number&lt;23)</l>
+<l>    disp_message(hwnd, 'sidefun1 提取槽区域数量 &lt;23', 'window', (900)/h, 30, 'red', 'false')</l>
+<l>    ret1 := -2</l>
+<l>    return()</l>
+<l>endif</l>
+<c></c>
+<l>caoHeight :=0</l>
+<l>caoHeightsTuple:=[0]</l>
+<l>for Index := 1 to 23 by 1</l>
+<l>    select_obj(SelectedRegions, ObjectSelected, Index)</l>
+<l>    area_center(ObjectSelected, Area, Row, Column)</l>
+<l>    if(Index!=1)</l>
+<l>        if(Row-caoHeight&gt;chipHeight*1.5 or Row-caoHeight&lt;chipHeight*0.7)</l>
+<l>            disp_message(hwnd, 'sidefun1 槽不连续', 'window', (900)/h, 30, 'red', 'true')</l>
+<l>            ret1 := -3</l>
+<l>            return()</l>
+<l>        endif</l>
+<l>    endif</l>
+<l>    caoHeight := Row</l>
+<l>    gen_contour_region_xld (ObjectSelected, Contours, 'border')</l>
+<l>    fit_rectangle2_contour_xld (Contours, 'regression', -1, 0, 0, 3, 2, Row1, Column1, Phi, Length1, Length2, PointOrder)</l>
+<l>    gen_rectangle2(Rectangle1, Row1, Column1, Phi, Length1, Length2)</l>
+<c>    *传出拟合的槽区供下一函数使用</c>
+<l>    concat_obj(outEmptyRegion, Rectangle1, outEmptyRegion)</l>
+<l>    if(Index==1)</l>
+<l>        continue</l>
+<l>    endif</l>
+<l>    region_features(Rectangle1, 'rect2_len2', len1Value0)</l>
+<l>    caoHeightsTuple:=[caoHeightsTuple,len1Value0]</l>
+<c>    *对宽度缩放</c>
+<l>    addoffset:=12</l>
+<l>    len1Value := (len1Value0-addoffset)*2*0.01046</l>
+<c>    *宽度效准</c>
+<l>    if(len1Value&lt;CaoWidthMin)</l>
+<l>        dilation_rectangle1(Rectangle1, RegionDilation, 0.5, 7)</l>
+<l>        difference(RegionDilation, Rectangle1, RegionDifference)</l>
+<l>        reduce_domain(Image, RegionDifference, ImageReduced2)</l>
+<l>        threshold (ImageReduced2, Regions2, 0, 79)</l>
+<l>        opening_circle(Regions2, RegionOpening2, 1)</l>
+<l>        region_features(RegionOpening2, 'area', Value)</l>
+<l>        if(Value&gt;100)</l>
+<l>            len1Value :=CaoWidthMin</l>
+<l>        endif</l>
+<l>    elseif(len1Value&gt;CaoWidthMax)</l>
+<l>        erosion_rectangle1(Rectangle1, RegionErosion, 0.5, 8)</l>
+<l>        difference(Rectangle1, RegionErosion, RegionDifference1)</l>
+<l>        reduce_domain(Image, RegionDifference1, ImageReduced3)</l>
+<l>        threshold (ImageReduced3, Regions3, 125, 255)</l>
+<l>        opening_circle(Regions3, RegionOpening4, 1)</l>
+<l>        region_features(RegionOpening4, 'area', Value1)</l>
+<l>        if(Value1&gt;100)</l>
+<l>            len1Value :=CaoWidthMax</l>
+<l>        endif</l>
+<l>    endif</l>
+<c>    </c>
+<c>    *判断宽度</c>
+<l>    len1Valuesz  := len1Value$'.2'</l>
+<l>    if(len1Value&lt;CaoWidthMin or len1Value&gt;CaoWidthMax)</l>
+<c>        *在槽宽大时，当上下边缘有白色亮点时可能是误判</c>
+<l>        disp_message(hwnd, Index-1+' 槽宽：'+len1Valuesz+'mm', 'window', (Row+60)/h, (Column)/w, 'red', 'true')</l>
+<l>        concat_obj(EmptyRegion, Rectangle1, EmptyRegion)</l>
+<l>    elseif(1)</l>
+<l>        disp_message(hwnd, Index-1+' 槽宽：'+len1Valuesz+'mm', 'window', (Row+60)/h, (Column)/w, 'blue', 'true')</l>
+<l>        dev_display(Rectangle1)</l>
+<l>    endif</l>
+<l>endfor</l>
+<c></c>
+<l>union1(EmptyRegion, region1)</l>
+<l>union1(outEmptyRegion, outRegion1)</l>
+<l>region_features(region1, 'area', errorRgnArea)</l>
+<l>if(errorRgnArea&gt;0 and ret1==0)</l>
+<l>    ret1 := -10</l>
+<l>endif</l>
+<c></c>
+<l>dev_set_color('red')</l>
+<l>dev_display(region1)</l>
+<c>*hv_hwnd</c>
+<l>return ()</l>
+</body>
+<docu id="Sidefun1">
+<parameters>
+<parameter id="CaoWidthMax"/>
+<parameter id="CaoWidthMin"/>
+<parameter id="Image"/>
+<parameter id="hwnd"/>
+<parameter id="outRegion1"/>
+<parameter id="region1"/>
+<parameter id="ret1"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="Sidefun2">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+<par name="inRegion2" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="region2" base_type="iconic" dimension="0"/>
+</oo>
+<ic>
+<par name="hwnd" base_type="ctrl" dimension="0"/>
+<par name="MaociWidth" base_type="ctrl" dimension="0"/>
+<par name="MaociHeight" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="ret2" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c></c>
+<l>ret2:=0</l>
+<l>dev_set_color('green')</l>
+<l>heightThreshold := MaociHeight/0.00833-10</l>
+<c></c>
+<l>get_window_extents(hwnd, Row, Column, Width, Height)</l>
+<l>get_image_size(Image, Width1, Height1)</l>
+<l>tuple_real(Width, Width)</l>
+<l>tuple_real(Height, Height)</l>
+<l>w:=Width1/Width</l>
+<l>h:=Height1/Height</l>
+<c></c>
+<l>gen_empty_region(EmptyRegion)</l>
+<c></c>
+<l>if(99&lt;11)</l>
+<l>    disp_message(hwnd, 'sidefun2 提取槽区域数量 &lt;11', 'window', (1000)/h, 30, 'red', 'true')</l>
+<l>    ret2 := -1</l>
+<l>    return()</l>
+<l>endif</l>
+<c></c>
+<l>region_features(inRegion2, 'column2', Value5)</l>
+<l>connection(inRegion2, ConnectedRegions)</l>
+<l>shape_trans(ConnectedRegions, RegionTrans, 'rectangle2')</l>
+<l>for Index := 1 to 22 by 1</l>
+<l>    select_obj(RegionTrans, ObjectSelected, Index)</l>
+<l>    region_features(ObjectSelected, 'column1', ObjectSelectedcolumn1)</l>
+<l>    region_features(ObjectSelected, 'rect2_len2', Value2)</l>
+<l>    xxxxx:=15</l>
+<l>    erosion_rectangle1(ObjectSelected, ObjectSelected, 1, xxxxx)</l>
+<l>    reduce_domain(Image, ObjectSelected, ImageReduced)</l>
+<c>    </c>
+<l>    threshold (ImageReduced, Regions, 180, 255)</l>
+<l>    closing_rectangle1(Regions, RegionClosing, 10, 10)</l>
+<l>    opening_rectangle1(RegionClosing, RegionOpening, 3, 3)</l>
+<l>    connection(RegionOpening, ConnectedRegions1)</l>
+<c>    *判断</c>
+<l>    select_shape (ConnectedRegions1, SelectedRegions, ['width','height'], 'and', [3,heightThreshold], [2600,100])</l>
+<l>    count_obj(SelectedRegions, Number1)</l>
+<l>    union1(SelectedRegions, RegionUnion)</l>
+<c>    *多块区域时，判断是否几块区域临近，临近合并</c>
+<l>    if(Number1&gt;1)</l>
+<l>        closing_circle(RegionUnion, RegionUnion, 10)</l>
+<l>        connection(RegionUnion, SelectedRegions)</l>
+<l>        count_obj(SelectedRegions, Number1)</l>
+<l>    endif</l>
+<c>    *判断每一块是否为粘铜</c>
+<l>    for Index2 := 1 to Number1 by 1</l>
+<l>        select_obj(SelectedRegions, ObjectSelected2, Index2)</l>
+<l>        region_features(ObjectSelected2, ['circularity','height','width','area'], Value)</l>
+<c>        </c>
+<l>        if(Value[3]&gt;400 or Value[1]&gt;40 )</l>
+<l>            removeThresholdNum:=0</l>
+<c>            *排除中间浅色小圆点干扰</c>
+<c>            *通过高度确认排除阀值</c>
+<l>            if(Value[0]&gt;0.05)</l>
+<l>                if(Value[1]&gt;=40)</l>
+<l>                    removeThresholdNum:=180</l>
+<l>                elseif(Value[1]&gt;=30)</l>
+<l>                    removeThresholdNum:=190</l>
+<l>                elseif(Value[1]&gt;=20)</l>
+<l>                    removeThresholdNum:=200</l>
+<l>                elseif(Value[1]&gt;=10)</l>
+<l>                    removeThresholdNum:=220</l>
+<l>                else</l>
+<l>                    removeThresholdNum:=250</l>
+<l>                endif</l>
+<l>            endif</l>
+<c>            *判断是否为与片连接的小区域，是阀值缩小</c>
+<l>            if(Value[1]&lt;22 and Value[3]&lt;300 )</l>
+<l>                dilation_circle(ObjectSelected2, RegionDilation, 2)</l>
+<l>                difference(RegionDilation, ObjectSelected2, RegionDifference1)</l>
+<l>                reduce_domain(ImageReduced, RegionDifference1, ImageReduced1)</l>
+<l>                min_max_gray (RegionDifference1, ImageReduced1, 0, Min, Max, Range)</l>
+<l>                if(Max&gt;230)</l>
+<l>                    removeThresholdNum:=150</l>
+<l>                endif</l>
+<l>            endif</l>
+<c></c>
+<l>            reduce_domain(ImageReduced, ObjectSelected2, ImageReduced2)</l>
+<l>            threshold (ImageReduced2, Regions1, removeThresholdNum, 255)</l>
+<l>            region_features(Regions1, 'area', Value1)</l>
+<l>            if(Value1&lt;200)</l>
+<l>                continue</l>
+<l>            endif</l>
+<l>            concat_obj(EmptyRegion, ObjectSelected2, EmptyRegion)</l>
+<l>        endif</l>
+<l>    endfor</l>
+<c>    </c>
+<c>    *胜克电木粉提取</c>
+<l>    erosion_rectangle1(ObjectSelected, ObjectSelected, 30, 0.5)</l>
+<l>    erosion_rectangle1(ObjectSelected, RegionErosion, 350, 0.5)</l>
+<l>    move_region(RegionErosion, RegionMoved, 0, -40)</l>
+<l>    difference(ObjectSelected, RegionMoved, RegionDifference2)</l>
+<l>    opening_circle(RegionDifference2, RegionDifference2, 3.5)</l>
+<l>    connection(RegionDifference2, ConnectedRegions3)</l>
+<l>    select_shape_std(ConnectedRegions3, SelectedRegionsRight, 'max_area', 70)</l>
+<l>    select_shape (ConnectedRegions3, SelectedRegionsLeft, 'area', 'and', 7027.52, 10844)</l>
+<c>    *中间段</c>
+<l>    reduce_domain(ImageReduced, RegionMoved, ImageReduced3)</l>
+<l>    intensity(RegionMoved, ImageReduced3, Mean, Deviation)</l>
+<l>    threshold (ImageReduced3, Regions2, 0, Mean-20)</l>
+<l>    closing_rectangle1(Regions2, RegionClosing1, 5, 10)</l>
+<l>    connection(RegionClosing1, ConnectedRegions2)</l>
+<l>    region_features(ConnectedRegions2, 'height', Value4)</l>
+<l>    tuple_max(Value4, Max1)</l>
+<l>    if(Max1&gt;50)</l>
+<l>        concat_obj(EmptyRegion, ObjectSelected, EmptyRegion)</l>
+<l>    endif</l>
+<c>    *槽底部段</c>
+<l>    reduce_domain(ImageReduced, SelectedRegionsRight, ImageReduced3)</l>
+<l>    intensity(SelectedRegionsRight, ImageReduced3, Mean, Deviation)</l>
+<l>    threshold (ImageReduced3, Regions2, 0, Mean-20)</l>
+<l>    closing_rectangle1(Regions2, RegionClosing1, 5, 10)</l>
+<l>    connection(RegionClosing1, ConnectedRegions2)</l>
+<l>    region_features(ConnectedRegions2, 'height', Value4)</l>
+<l>    tuple_max(Value4, Max1)</l>
+<l>    if(Max1&gt;50)</l>
+<l>        concat_obj(EmptyRegion, ObjectSelected, EmptyRegion)</l>
+<l>    endif</l>
+<c>    *斜坡处正常情况下为黑色，有异物时灰度增高</c>
+<l>    reduce_domain(Image, SelectedRegionsLeft, ImageReduced4)</l>
+<l>    threshold (ImageReduced4, Regions3, 31, 255)</l>
+<l>    region_features(Regions3, 'area', Value3)</l>
+<l>    if(Value3&gt;3500)</l>
+<l>        concat_obj(EmptyRegion, SelectedRegionsLeft, EmptyRegion)</l>
+<l>    endif</l>
+<c>    </c>
+<l>endfor</l>
+<c></c>
+<l>union1(EmptyRegion, region2)</l>
+<l>region_features(region2, 'area', errorRgnArea)</l>
+<l>if(errorRgnArea&gt;0 and ret2==0)</l>
+<l>    ret2 := -10</l>
+<l>    dev_set_color('red')</l>
+<l>    *dilation_rectangle1(region2, RegionDilation1, 20, 20)</l>
+<l>    dev_display(region2)</l>
+<l>endif</l>
+<c>*hv_hwnd</c>
+<l>return ()</l>
+<c></c>
+</body>
+<docu id="Sidefun2">
+<parameters>
+<parameter id="Image"/>
+<parameter id="MaociHeight"/>
+<parameter id="MaociWidth"/>
+<parameter id="hwnd"/>
+<parameter id="inRegion2"/>
+<parameter id="region2"/>
+<parameter id="ret2"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="Sidefun3">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+<par name="inRegion3" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="region3" base_type="iconic" dimension="0"/>
+</oo>
+<ic>
+<par name="hwnd" base_type="ctrl" dimension="0"/>
+<par name="blackArea" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="ret3" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c></c>
+<l>ret3:=0</l>
+<l>dev_set_color('green')</l>
+<c></c>
+<l>get_window_extents(hwnd, Row, Column, Width, Height)</l>
+<l>get_image_size(Image, Width1, Height1)</l>
+<l>tuple_real(Width, Width)</l>
+<l>tuple_real(Height, Height)</l>
+<l>w:=Width1/Width</l>
+<l>h:=Height1/Height</l>
+<c></c>
+<l>gen_empty_region(EmptyRegion)</l>
+<c></c>
+<l>if(99&lt;10)</l>
+<l>    disp_message(hwnd, 'sidefun3 提取槽区域数量 &lt;10', 'window', (1100)/h, 30, 'red', 'true')</l>
+<l>    ret3 := -1</l>
+<l>    return()</l>
+<l>endif</l>
+<c></c>
+<l>connection(inRegion3, ConnectedRegions)</l>
+<l>for Index := 1 to 22 by 1</l>
+<l>    select_obj(ConnectedRegions, ObjectSelected, Index)</l>
+<l>    select_obj(ConnectedRegions, ObjectSelected1, Index+1)</l>
+<l>    union2(ObjectSelected, ObjectSelected1, RegionUnion)</l>
+<l>    shape_trans(RegionUnion, RegionTrans, 'convex')</l>
+<l>    difference(RegionTrans, RegionUnion, RegionDifference)</l>
+<c>    *</c>
+<l>    opening_circle(RegionDifference, RegionOpening, 40)</l>
+<l>    reduce_domain(Image, RegionOpening, ImageReduced2)</l>
+<l>    threshold (ImageReduced2, Regions3, 110, 255)</l>
+<l>    opening_circle(Regions3, RegionOpening1, 3.5)</l>
+<l>    shape_trans(RegionOpening1, RegionTrans1, 'rectangle2')</l>
+<c></c>
+<l>    erosion_circle(RegionTrans1, RegionErosion, 6)</l>
+<l>    move_region(RegionErosion, RegionMoved, 3, 0)</l>
+<l>    reduce_domain(Image, RegionMoved, ImageReduced)</l>
+<l>    threshold (ImageReduced, Regions, 0, 161)</l>
+<l>    region_features(Regions, 'area', Value)</l>
+<c>    </c>
+<c>    </c>
+<l>    threshold (ImageReduced, Regions2, 0, 85)</l>
+<l>    connection(Regions2, ConnectedRegions1)</l>
+<l>    select_shape_std(ConnectedRegions1, SelectedRegions, 'max_area', 70)</l>
+<l>    region_features(SelectedRegions, ['area'], Maxarea)</l>
+<l>    region_features(SelectedRegions, ['width'], Maxwidth)</l>
+<l>    region_features(SelectedRegions, ['row','column'], Value1)</l>
+<l>    region_features(RegionErosion, ['row1','row2','column2'], Value2)</l>
+<c></c>
+<c>    </c>
+<l>    if(Value&gt;blackArea or Maxarea&gt;blackArea/10)</l>
+<c>        *消除上下边缘黑区造成的误判</c>
+<l>        if(Maxarea&lt;700 and Maxwidth&gt;80)</l>
+<l>            if(Value1[0]&lt;Value2[0]+10 or Value1[0]&gt;Value2[1]-10)</l>
+<l>                continue</l>
+<l>            endif</l>
+<l>        endif</l>
+<c>        *消除底部小碰伤造成的误判</c>
+<l>        if(Value1[1]&gt;Value2[2]-20 and Value&lt;blackArea+3000)</l>
+<l>            reduce_domain(ImageReduced, SelectedRegions, ImageReduced1)</l>
+<l>            threshold (ImageReduced1, Regions1, 0, 55)</l>
+<l>            connection(Regions1, ConnectedRegions2)</l>
+<l>            select_shape_std(ConnectedRegions2, SelectedRegions1, 'max_area', 70)</l>
+<l>            region_features(SelectedRegions1, ['area','width'], Value3)</l>
+<l>            if(Value3[0]&lt;400 and Value3[1]&lt;10)</l>
+<l>                continue</l>
+<l>            endif</l>
+<l>        endif</l>
+<l>        if(Maxarea&lt;500 and Value&lt;blackArea+3000)</l>
+<l>            continue</l>
+<l>        endif</l>
+<c>        </c>
+<l>        concat_obj(EmptyRegion, Regions, EmptyRegion)</l>
+<l>    endif</l>
+<l>endfor</l>
+<c></c>
+<l>union1(EmptyRegion, region3)</l>
+<l>region_features(region3, 'area', errorRgnArea)</l>
+<l>if(errorRgnArea&gt;0 and ret3==0)</l>
+<l>    ret3 := -10</l>
+<l>endif</l>
+<c></c>
+<l>dev_set_color('red')</l>
+<l>dev_display(region3)</l>
+<c>*hv_hwnd</c>
+<l>return ()</l>
+<c></c>
+</body>
+<docu id="Sidefun3">
+<parameters>
+<parameter id="Image"/>
+<parameter id="blackArea"/>
+<parameter id="hwnd"/>
+<parameter id="inRegion3"/>
+<parameter id="region3"/>
+<parameter id="ret3"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="funMatchDifference">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+</io>
+<ic>
+<par name="hwnd" base_type="ctrl" dimension="0"/>
+</ic>
+</interface>
+<body>
+<c>*创建模板和保存</c>
+<c></c>
+<l>isCreate :=0</l>
+<l>if(isCreate)</l>
+<l>*     read_image(Image0, 'E:/换向器/Image/Top/Bad/0078.tif')</l>
+<l>*     gen_rectangle1 (ROI_0, 54.5, 1682.5, 620.5, 2112.5)</l>
+<l>*     reduce_domain(Image0, ROI_0, ImageReduced)</l>
+<l>*     create_shape_model (ImageReduced, 'auto', -3.14, 6.29, 'auto', 'auto', 'use_polarity', 'auto', 'auto', ModelID)</l>
+<l>*     write_shape_model(ModelID, 'E:/换向器/halcon/mode.shm')</l>
+<c>    </c>
+<l>*     threshold (Image0, Regions, 0, 200)</l>
+<l>*     opening_circle(Regions, RegionOpening, 5)</l>
+<l>*     connection(RegionOpening, ConnectedRegions)</l>
+<l>*     select_shape_std(ConnectedRegions, SelectedRegions, 'max_area', 70)</l>
+<l>*     write_region(SelectedRegions, 'E:/换向器/halcon/stdreg.reg')</l>
+<c>        </c>
+<l>endif</l>
+<c></c>
+<l>read_shape_model('E:/换向器/halcon/mode.shm', ModelID)</l>
+<c></c>
+<l>read_region(RegionSTD, 'E:/换向器/halcon/stdreg.reg')</l>
+<l>area_center(RegionSTD, Area1, Row0, Column0)</l>
+<c></c>
+<c></c>
+<l>threshold (Image, Regions, 0, 200)</l>
+<l>connection(Regions, ConnectedRegions)</l>
+<l>select_shape_std(ConnectedRegions, SelectedRegions, 'max_area', 70)</l>
+<l>region_features(SelectedRegions, 'area', areaValue)</l>
+<l>if(areaValue&lt;3950000-500000 or areaValue&gt;3950000+500000)</l>
+<l>    disp_message(hwnd, 'matchDifference 选择整体区域面积eorror', 'window', 1500, 20, 'red', 'true')</l>
+<l>    return()</l>
+<l>endif</l>
+<l>shape_trans(SelectedRegions, RegionTrans, 'convex')</l>
+<l>reduce_domain(Image, RegionTrans, ImageReduced2)</l>
+<l>threshold (ImageReduced2, Regions1, 153, 255)</l>
+<l>connection(Regions1, ConnectedRegions1)</l>
+<l>select_shape (ConnectedRegions1, SelectedRegions1, ['circularity','area'], 'and', [0.94722,709259], [1,831481])</l>
+<l>count_obj(SelectedRegions1, Number)</l>
+<l>if(Number!=1)</l>
+<l>    disp_message(hwnd, 'matchDifference 选择中心圆eorror', 'window', 1500, 20, 'red', 'true')</l>
+<c></c>
+<l>    return()</l>
+<l>endif</l>
+<l>area_center(SelectedRegions1, Area, Row1, Column1)</l>
+<c></c>
+<c>*match</c>
+<l>erosion_circle(RegionTrans, RegionErosion, 400)</l>
+<l>difference(RegionTrans, RegionErosion, RegionDifference)</l>
+<l>dilation_circle(RegionDifference, RegionDilation, 100)</l>
+<l>reduce_domain(Image, RegionDilation, ImageReduced1)</l>
+<l>find_shape_model(ImageReduced1, ModelID, -3.14, 6.29, 0.7, 1, 0.5, 'least_squares', 0, 0.9, Row, Column, Angle, Score)</l>
+<l>if(|Score|!=1)</l>
+<l>    disp_message(hwnd, 'matchDifference 匹配结果eorror', 'window', 1500, 20, 'red', 'true')</l>
+<c></c>
+<l>    return()</l>
+<l>endif</l>
+<c>*move</c>
+<l>hom_mat2d_identity(Matrix1)</l>
+<l>hom_mat2d_rotate(Matrix1,Angle,Row0, Column0,Matrix3)</l>
+<l>hom_mat2d_translate(Matrix3,Row1-Row0,Column1-Column0,Matrix4)</l>
+<l>affine_trans_region(RegionSTD, RegionAffineTrans, Matrix4, 'nearest_neighbor')</l>
+<c></c>
+<c>*difference</c>
+<l>difference(SelectedRegions, RegionAffineTrans, RegionDifference1)</l>
+<l>dilation_circle(SelectedRegions1, RegionDilation1, 640)</l>
+<l>intersection(RegionDifference1, RegionDilation1, RegionIntersection)</l>
+<l>opening_circle(RegionIntersection, RegionOpening1, 25)</l>
+<l>dilation_circle(RegionOpening1, RegionDilation2, 15)</l>
+<c></c>
+<l>difference(RegionAffineTrans,SelectedRegions,  RegionDifference2)</l>
+<l>opening_circle(RegionDifference2, RegionOpening2, 40)</l>
+<l>dilation_circle(RegionOpening2, RegionDilation3, 15)</l>
+<c></c>
+<l>dev_display(RegionDilation2)</l>
+<l>dev_display(RegionDilation3)</l>
+<l>return ()</l>
+</body>
+<docu id="funMatchDifference">
+<parameters>
+<parameter id="Image"/>
+<parameter id="hwnd"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="Sidefun4">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+<par name="inRegion4" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="region4" base_type="iconic" dimension="0"/>
+</oo>
+<ic>
+<par name="input_Scale_1Goupian" base_type="ctrl" dimension="0"/>
+<par name="hwnd" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="ret4" base_type="ctrl" dimension="0"/>
+<par name="ret5" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c></c>
+<l>ret4:=0</l>
+<l>ret5:=0</l>
+<l>dev_set_color('green')</l>
+<c></c>
+<l>get_window_extents(hwnd, Row, Column, Width, Height)</l>
+<l>get_image_size(Image, Width1, Height1)</l>
+<l>tuple_real(Width, Width)</l>
+<l>tuple_real(Height, Height)</l>
+<l>w:=Width1/Width</l>
+<l>h:=Height1/Height</l>
+<c></c>
+<l>gen_empty_region(EmptyRegion)</l>
+<c></c>
+<c>*2019-09-18改 由于片的上（左）边缘提取不稳定（上边缘形状不稳定），利用下边缘来作为钩区域定位参照</c>
+<l>region_features(inRegion4,'column2', ChipColumn2)</l>
+<l>gouMin := ChipColumn2-1070</l>
+<l>gouMax := ChipColumn2-1050+80</l>
+<l>gen_rectangle1(RectangleSTD, 0, gouMin, Height1, gouMax)</l>
+<l>gouMiddle :=ChipColumn2-980</l>
+<l>gen_region_line(RegionLinesSTD, 0, gouMiddle, Height1, gouMiddle)</l>
+<l>dev_display(RegionLinesSTD)</l>
+<c></c>
+<l>move_region(inRegion4, inRegion4Moved, 0, -150)</l>
+<l>connection(inRegion4Moved, inRegion4ConnectedRegions)</l>
+<c></c>
+<l>gen_empty_region(GouDing)</l>
+<l>gouPianDif:=[]</l>
+<c></c>
+<c>*钩顶区域提取</c>
+<l>for Index0 := 1 to 22 by 1</l>
+<l>    select_obj(inRegion4ConnectedRegions, caoUp, Index0)</l>
+<l>    select_obj(inRegion4ConnectedRegions, caoDown, Index0+1)</l>
+<l>    union2(caoUp, caoDown, caoUpDownRegionUnion)</l>
+<l>    closing_rectangle1(caoUpDownRegionUnion, RegionClosing2, 2, 300)</l>
+<l>    difference(RegionClosing2, caoUpDownRegionUnion, RegionDifference)</l>
+<l>    intersection(RegionDifference, RectangleSTD, RegionIntersectionSTD)</l>
+<l>    region_features(RegionIntersectionSTD, ['row'], chipValueSTD)</l>
+<c>    </c>
+<c>    *钩顶区域提取</c>
+<l>    erosion_rectangle1(RegionIntersectionSTD, RegionErosion, 0.5, 90)</l>
+<l>    reduce_domain(Image, RegionErosion, ImageReduced6)</l>
+<l>    threshold (ImageReduced6, Regions, 0, 110)</l>
+<l>    opening_circle(Regions, RegionOpening1, 3.5)</l>
+<c>    </c>
+<l>    fill_up(RegionOpening1, RegionFillUp)</l>
+<l>    region_features(RegionFillUp, 'inner_width', Value2)</l>
+<l>    opening_circle(RegionFillUp, RegionOpening, Value2/2-1)</l>
+<l>    connection(RegionOpening, ConnectedRegions3)</l>
+<l>    select_shape_std(ConnectedRegions3, SelectedRegions2, 'max_area', 70)</l>
+<l>    region_features(SelectedRegions2, 'height', Value1)</l>
+<l>    if(Value1&gt;110)</l>
+<l>        opening_rectangle1(RegionOpening, RegionOpening, 30, 1)</l>
+<l>    endif</l>
+<l>    if(Value1&lt;70)</l>
+<l>        opening_circle(RegionFillUp, RegionOpening, 8)</l>
+<l>    endif</l>
+<c>    </c>
+<c>    </c>
+<l>    connection(RegionOpening, ConnectedRegions3)</l>
+<l>    select_shape_std(ConnectedRegions3, SelectedRegions2, 'max_area', 70)</l>
+<l>    region_features(SelectedRegions2, ['height','width'], Value)</l>
+<l>    if(Value[0]&gt;110 or Value[0]&lt;70)</l>
+<l>        disp_message(hwnd, 'sidefun4 钩顶上侧宽度异常', 'window', (1200)/h, 30, 'red', 'true')</l>
+<l>        ret4 := -1</l>
+<l>        *concat_obj(RegionErosion, EmptyRegion, EmptyRegion)</l>
+<l>        dev_set_color('red')</l>
+<l>        dev_display(RegionErosion)</l>
+<l>        return()</l>
+<l>    endif</l>
+<c>    </c>
+<l>    xxx:=150</l>
+<l>    if(Value[1]&gt;70)</l>
+<l>        xxx:=50</l>
+<l>    endif</l>
+<l>    dilation_rectangle1(SelectedRegions2, RegionDilation, xxx, 0.5)</l>
+<l>    reduce_domain(ImageReduced6, RegionDilation, ImageReduced)</l>
+<l>    threshold (ImageReduced, Regions1, 0, 160)</l>
+<l>    closing_rectangle1(Regions1, RegionClosing, 35, 3)</l>
+<l>    opening_rectangle1(RegionClosing, gouDingSingle, 40, 45)</l>
+<c>    </c>
+<c>    </c>
+<l>    region_features(gouDingSingle, ['area'], SingleGouDingArea)</l>
+<l>    if(SingleGouDingArea[0]==0)</l>
+<l>        disp_message(hwnd, 'sidefun4 钩顶区域未找到钩', 'window', (1200)/h, 30, 'red', 'true')</l>
+<l>        ret4 := -2</l>
+<l>        *concat_obj(RegionErosion, EmptyRegion, EmptyRegion)</l>
+<l>        dev_set_color('red')</l>
+<l>        dev_display(RegionErosion)</l>
+<l>        return()</l>
+<l>    else</l>
+<c>        *一、钩顶宽度检测</c>
+<l>        region_features(gouDingSingle, 'height', SingleGouDingHeight)</l>
+<l>        if(SingleGouDingHeight&gt;110 or SingleGouDingHeight&lt;70)</l>
+<l>            disp_message(hwnd, 'sidefun4 钩顶宽度异常', 'window', (1200)/h, 30, 'red', 'true')</l>
+<l>            ret4 := -3</l>
+<l>            *concat_obj(RegionErosion, EmptyRegion, EmptyRegion)</l>
+<l>            dev_set_color('red')</l>
+<l>            dev_display(gouDingSingle)</l>
+<l>            return()</l>
+<l>        endif</l>
+<c>        *提取到钩后，判断钩偏（通过判断到相邻上下槽的距离差判断）</c>
+<c>        *二、距离差</c>
+<l>        region_features(gouDingSingle, 'row', SingleGouDingRow)</l>
+<l>        region_features(RegionIntersectionSTD,['row1','row2'], chipSTDRows)</l>
+<l>        upDistance:=SingleGouDingRow-chipSTDRows[0]</l>
+<l>        downDitance:=chipSTDRows[1]-SingleGouDingRow</l>
+<l>        distanceDif :=upDistance-downDitance</l>
+<l>        gouPianDif:=[gouPianDif,distanceDif]</l>
+<c>        </c>
+<c>        </c>
+<c>        *因为旋转是否居中对距离差影响巨大，容易误判，所以不能对每个钩进行钩偏判断</c>
+<l>*         if(distanceDif&gt; 30 or distanceDif&lt;-30 )</l>
+<l>*             disp_message(hwnd, 'sidefun4 钩偏', 'window', (1200)/h, 30, 'red', 'true')</l>
+<l>*             ret5 := -3</l>
+<l>            *concat_obj(RegionErosion, EmptyRegion, EmptyRegion)</l>
+<l>*             dev_set_color('red')</l>
+<l>*             dev_display(gouDingSingle)</l>
+<l>*             dev_display(RegionIntersectionSTD)</l>
+<l>*             return()</l>
+<l>*         endif</l>
+<c>        </c>
+<l>        concat_obj(GouDing, gouDingSingle, GouDing)</l>
+<l>    endif</l>
+<l>endfor</l>
+<c></c>
+<l>union1(GouDing, RegionUnion)</l>
+<l>connection(RegionUnion, ConnectedRegions)</l>
+<l>count_obj(ConnectedRegions, Number)</l>
+<l>if(Number!=22)</l>
+<l>    disp_message(hwnd, 'sidefun4 提取钩顶区域数量 !=22', 'window', (1200)/h, 30, 'red', 'true')</l>
+<l>    ret4 := -4</l>
+<l>    return()</l>
+<l>endif</l>
+<c></c>
+<c>*钩偏判断</c>
+<c>*因为顶部相机已做钩间距判断(单个钩偏已排除)，剩下所有钩都偏情况。侧面理论上只需判断有一处居中，则全部钩居中</c>
+<c>*以上结论在槽间距离相等的条件下成立，此条件未确认</c>
+<l>tuple_mean(gouPianDif, gouPianDifMean)</l>
+<l>if(gouPianDifMean&gt;input_Scale_1Goupian or gouPianDifMean&lt;-input_Scale_1Goupian)</l>
+<l>    ret5:=-10</l>
+<l>    return()</l>
+<l>endif</l>
+<c></c>
+<c>*钩高度判断</c>
+<l>region_features(ConnectedRegions, 'column2', GouDingColumn2Values)</l>
+<l>tuple_sub(ChipColumn2, GouDingColumn2Values, GouHeightsValues)</l>
+<c></c>
+<l>for Index := 0 to 21 by 1</l>
+<l>    tuple_select(GouHeightsValues, Index, Selected)</l>
+<c>    *判断</c>
+<l>    if(Selected&gt;1020)//钩高</l>
+<l>        select_obj(ConnectedRegions, ObjectSelected, Index+1)</l>
+<l>        concat_obj(ObjectSelected, EmptyRegion, EmptyRegion)</l>
+<l>    elseif(Selected&lt;970)//钩低</l>
+<l>        select_obj(ConnectedRegions, ObjectSelected, Index+1)</l>
+<l>        concat_obj(ObjectSelected, EmptyRegion, EmptyRegion)</l>
+<l>    endif</l>
+<l>endfor</l>
+<l>union1(EmptyRegion, region4)</l>
+<l>region_features(region4, 'area', errorRgnArea)</l>
+<l>if(errorRgnArea&gt;0 and ret4==0)</l>
+<l>    ret4 := -10</l>
+<l>endif</l>
+<c></c>
+<l>dev_set_color('red')</l>
+<l>dev_display(region4)</l>
+<c>*hv_hwnd</c>
+<l>return ()</l>
+</body>
+<docu id="Sidefun4">
+<parameters>
+<parameter id="Image"/>
+<parameter id="hwnd"/>
+<parameter id="inRegion4"/>
+<parameter id="input_Scale_1Goupian"/>
+<parameter id="region4"/>
+<parameter id="ret4"/>
+<parameter id="ret5"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="funCorrectImage">
+<interface>
+<io>
+<par name="image" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="imageCorrected0" base_type="iconic" dimension="0"/>
+<par name="imageCorrected1" base_type="iconic" dimension="0"/>
+</oo>
+</interface>
+<body>
+<c></c>
+<l>* copy_image (image, imageCorrected0)</l>
+<l>* copy_image (image, imageCorrected1)</l>
+<c></c>
+<l>* return ()</l>
+<c>*两张图片时的判断与修正</c>
+<l>count_obj (image, Channels)</l>
+<l>if(Channels==1)</l>
+<l>    select_obj(image, Image1, 1)</l>
+<l>elseif(Channels==2)</l>
+<l>    select_obj(image, Image1, 1)</l>
+<l>    select_obj(image, Image2, 2)</l>
+<l>elseif(Channels==3)</l>
+<l>    select_obj(image, Image1, 1)</l>
+<l>    select_obj(image, Image2, 2)</l>
+<l>    select_obj(image, Image3, 3)</l>
+<l>endif</l>
+<c></c>
+<l>threshold (Image1, Regions, 0, 150)</l>
+<l>closing_circle(Regions, RegionClosing, 3.5)</l>
+<l>connection(RegionClosing, ConnectedRegions)</l>
+<l>fill_up(ConnectedRegions, RegionFillUp)</l>
+<l>select_shape_std(RegionFillUp, SelectedRegions1, 'max_area', 70)</l>
+<l>difference(RegionFillUp, SelectedRegions1, SelectedRegions)</l>
+<l>union1(SelectedRegions, RegionUnion)</l>
+<l>dilation_circle(RegionUnion, RegionDilation, 35)</l>
+<c></c>
+<l>count_obj(RegionDilation, Number)</l>
+<l>if(Number==0)</l>
+<l>    gen_region_points(RegionDilation, 100, 100)</l>
+<l>endif</l>
+<c></c>
+<l>if(Channels==1)</l>
+<l>    paint_region (RegionDilation, Image1, imageCorrected0, 255, 'fill')</l>
+<l>    copy_image(imageCorrected0, imageCorrected1)</l>
+<l>elseif(Channels==2)</l>
+<l>    paint_region (RegionDilation, Image1, imageCorrected0, 255, 'fill')</l>
+<l>    paint_region (RegionDilation, Image2, imageCorrected1, 255, 'fill')</l>
+<l>endif</l>
+<c></c>
+<l>return ()</l>
+</body>
+<docu id="funCorrectImage">
+<parameters>
+<parameter id="image"/>
+<parameter id="imageCorrected0"/>
+<parameter id="imageCorrected1"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="Sidefun5">
+<interface>
+<io>
+<par name="Image" base_type="iconic" dimension="0"/>
+<par name="inRegion5" base_type="iconic" dimension="0"/>
+</io>
+<oo>
+<par name="region5" base_type="iconic" dimension="0"/>
+</oo>
+<ic>
+<par name="hwnd" base_type="ctrl" dimension="0"/>
+<par name="shoulderValue" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="ret5" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c></c>
+<c></c>
+<l>ret5:=0</l>
+<l>dev_set_color('green')</l>
+<c></c>
+<l>get_window_extents(hwnd, Row, Column, Width, Height)</l>
+<l>get_image_size(Image, Width1, Height1)</l>
+<l>tuple_real(Width, Width)</l>
+<l>tuple_real(Height, Height)</l>
+<l>w:=Width1/Width</l>
+<l>h:=Height1/Height</l>
+<c></c>
+<l>gen_empty_region(EmptyRegion)</l>
+<c></c>
+<l>if(99&lt;18)</l>
+<l>    disp_message(hwnd, 'sidefun3 提取槽区域数量 &lt;18', 'window', (1300)/h, 30, 'red', 'true')</l>
+<l>    ret5 := -1</l>
+<l>    return()</l>
+<l>endif</l>
+<c></c>
+<l>connection(inRegion5, ConnectedRegions)</l>
+<l>for Index := 1 to 18 by 1</l>
+<l>    select_obj(ConnectedRegions, ObjectSelected, Index)</l>
+<l>    select_obj(ConnectedRegions, ObjectSelected1, Index+1)</l>
+<l>    union2(ObjectSelected, ObjectSelected1, RegionUnion)</l>
+<l>    shape_trans(RegionUnion, RegionTrans, 'convex')</l>
+<l>    difference(RegionTrans, RegionUnion, RegionDifference)</l>
+<l>    opening_circle(RegionDifference, RegionOpening, 5)</l>
+<l>    connection(RegionOpening, ConnectedRegions2)</l>
+<l>    select_shape_std(ConnectedRegions2, SelectedRegions, 'max_area', 70)</l>
+<l>    move_region(SelectedRegions, RegionMoved, 0, -50)</l>
+<l>    difference(RegionMoved, SelectedRegions, RegionDifference1)</l>
+<l>    connection(RegionDifference1, ConnectedRegions1)</l>
+<l>    select_shape_std(ConnectedRegions1, SelectedRegions1, 'max_area', 70)</l>
+<c>    *片宽度不等，通过实际宽度腐蚀</c>
+<l>    region_features(SelectedRegions1, 'height', Value1)</l>
+<l>    erosionValue:=50+(Value1-250)</l>
+<l>    *erosion_rectangle1(SelectedRegions1, SelectedRegions1, 0.5, 8)</l>
+<l>    erosion_rectangle1(SelectedRegions1, RegionErosion, 0.5, erosionValue)</l>
+<l>    difference(SelectedRegions1, RegionErosion, RegionDifference2)</l>
+<l>    opening_circle(RegionDifference2, RegionOpening1, 2.5)</l>
+<c>  </c>
+<l>    xxxxx:=82</l>
+<l>    gen_empty_region(shoulderRegion0)</l>
+<l>    connection(RegionOpening1, ConnectedRegions3)</l>
+<l>    select_shape (ConnectedRegions3, ConnectedRegions3, 'area', 'and', 1143.52, 5000)</l>
+<l>    count_obj(ConnectedRegions3, Number)</l>
+<l>    if(Number!=2)</l>
+<l>        disp_message(hwnd, 'sidefun5 肩区数量！=2', 'window', (1300)/h, 30, 'red', 'true')</l>
+<l>        ret5 := -2</l>
+<l>        *stop()</l>
+<l>        return()</l>
+<l>    endif</l>
+<l>    for Index1 := 1 to 2 by 1</l>
+<l>        select_obj(ConnectedRegions3, ObjectSelected2, Index1)</l>
+<l>        reduce_domain(Image, ObjectSelected2, ImageReduced)</l>
+<c>        *获取片上面熟料区灰度值</c>
+<l>        if(Index1==1)</l>
+<l>            shape_trans(ObjectSelected, RegionTrans1, 'rectangle2')</l>
+<l>            move_region(RegionTrans1, RegionMoved1, 0, -70)</l>
+<l>            difference(RegionMoved1, RegionTrans1, RegionDifference3)</l>
+<l>            opening_circle(RegionDifference3, RegionOpening3, 20)</l>
+<l>            move_region(RegionOpening3, RegionMoved2, 40, -100)</l>
+<l>            dilation_circle(RegionMoved2, RegionDilation, 5)</l>
+<l>            intensity (RegionDilation, Image, Mean, Deviation)</l>
+<l>        else</l>
+<l>            shape_trans(ObjectSelected1, RegionTrans1, 'rectangle2')</l>
+<l>            move_region(RegionTrans1, RegionMoved1, 0, -70)</l>
+<l>            difference(RegionMoved1, RegionTrans1, RegionDifference3)</l>
+<l>            opening_circle(RegionDifference3, RegionOpening3, 20)</l>
+<l>            move_region(RegionOpening3, RegionMoved2, -40, -100)</l>
+<l>            dilation_circle(RegionMoved2, RegionDilation, 20)</l>
+<l>            intensity (RegionDilation, Image, Mean, Deviation)</l>
+<l>        endif</l>
+<l>        threshold (ImageReduced, Regions, 0, Mean+40)</l>
+<l>        closing_rectangle1(Regions, Regions, 1, 25)</l>
+<c>        *下值越大越精确</c>
+<l>        judgeValue:=shoulderValue-(330-Value1)/2/2</l>
+<l>        if(judgeValue&gt;50)</l>
+<l>            judgeValue:=50</l>
+<l>        endif</l>
+<l>        if(judgeValue&lt;=1)</l>
+<l>            judgeValue:=1</l>
+<l>        endif</l>
+<l>        opening_rectangle1(Regions, RegionOpening2, 10, judgeValue)</l>
+<l>        region_features(RegionOpening2, 'area', Value)</l>
+<l>        if(Value&lt;500)</l>
+<l>*             dev_display(Regions)</l>
+<l>*             stop()</l>
+<l>            concat_obj(EmptyRegion, Regions, EmptyRegion)</l>
+<l>        endif</l>
+<l>    endfor</l>
+<l>*    dev_clear_window()</l>
+<l>*    dev_display(Image)</l>
+<l>*    dev_display(RegionOpening1)</l>
+<c>    </c>
+<c>    </c>
+<l>endfor</l>
+<c></c>
+<l>union1(EmptyRegion, region5)</l>
+<l>region_features(region5, 'area', errorRgnArea)</l>
+<l>if(errorRgnArea&gt;0 and ret5==0)</l>
+<l>    ret5 := -10</l>
+<l>endif</l>
+<c></c>
+<l>dev_set_color('red')</l>
+<l>dev_display(region5)</l>
+<c>*hv_hwnd</c>
+<l>return ()</l>
+<c></c>
+<c></c>
+</body>
+<docu id="Sidefun5">
+<parameters>
+<parameter id="Image"/>
+<parameter id="hwnd"/>
+<parameter id="inRegion5"/>
+<parameter id="region5"/>
+<parameter id="ret5"/>
+<parameter id="shoulderValue"/>
+</parameters>
+</docu>
+</procedure>
+</hdevelop>
