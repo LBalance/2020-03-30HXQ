@@ -1681,14 +1681,23 @@ void top2fun1(HObject ho_Image, HObject *ho_region1, HTuple hv_prav2_1, HTuple h
 
 	// Local iconic variables
 	HObject  ho_EmptyRegion, ho_ROI_0, ho_ImageReduced;
-	HObject  ho_Regions, ho_RegionFillUp, ho_RegionOpening, ho_ImageReduced1;
-	HObject  ho_circle1, ho_circle2, ho_circle3, ho_circle4;
-	HObject  ho_RegionDilation1;
+	HObject  ho_Regions, ho_ConnectedRegions, ho_SelectedRegions;
+	HObject  ho_circle1_, ho_circle2_, ho_circle3_, ho_circle4_;
+	HObject  ho_circle5_, ho_Contours, ho_circle2_M, ho_circle3_M;
+	HObject  ho_circle4_M, ho_circle2_D, ho_circle3_D, ho_circle4_D;
+	HObject  ho_circle23_D, ho_circle234_D, ho_SelectedRegions_D;
+	HObject  ho_circleSel_5Dif, ho_ImageReduced1_, ho_ImageReduced1_th;
+	HObject  ho_RegionWide, ho_RegionDilation, ho_RegionWideIntersection;
+	HObject  ho_ImageResult, ho_ImageResult_th, ho_RegionUnion;
+	HObject  ho_RegionClosing, ho_ConnectedRegions1, ho_SelectedRegions1;
+	HObject  ho_RegionUnion1, ho_RegionDilation1;
 
 	// Local control variables
 	HTuple  hv_graythreshold, hv_areaoffset, hv_tongPianRadRadius;
 	HTuple  hv_caoCount, hv_Row, hv_Column, hv_Width, hv_Height;
-	HTuple  hv_Width1, hv_Height1, hv_w, hv_h, hv_errorRgnArea;
+	HTuple  hv_Width1, hv_Height1, hv_w, hv_h, hv_Number, hv_Area;
+	HTuple  hv_Row1, hv_Column1, hv_R53, hv_Mean, hv_Deviation;
+	HTuple  hv_Value, hv_errorRgnArea;
 
 
 
@@ -1709,29 +1718,85 @@ void top2fun1(HObject ho_Image, HObject *ho_region1, HTuple hv_prav2_1, HTuple h
 
 	GenEmptyRegion(&ho_EmptyRegion);
 
-	if (0 != 0)
+
+
+	GenEllipse(&ho_ROI_0, 1400, 2000, HTuple(-0.838415).TupleRad(), 1640.18, 1524.72);
+	ReduceDomain(ho_Image, ho_ROI_0, &ho_ImageReduced);
+	//threshold (ImageReduced, Regions, 0, 180)
+	//fill_up (Regions, RegionFillUp)
+	//opening_circle (RegionFillUp, RegionOpening, 800)
+	//reduce_domain (ImageReduced, RegionOpening, ImageReduced1)
+
+	//erosion_circle (RegionOpening, circle1, 270)
+	//erosion_circle (RegionOpening, circle2, 370)
+	//erosion_circle (RegionOpening, circle3, 465)
+	//erosion_circle (RegionOpening, circle4, 560)
+	Threshold(ho_ImageReduced, &ho_Regions, 100, 255);
+	Connection(ho_Regions, &ho_ConnectedRegions);
+	SelectShape(ho_ConnectedRegions, &ho_SelectedRegions, (HTuple("circularity").Append("area")),
+		"and", (HTuple(0.954).Append(276735)), (HTuple(1).Append(492495)));
+	CountObj(ho_SelectedRegions, &hv_Number);
+	if (0 != (hv_Number == 0))
 	{
-		disp_message(hv_hwnd, "topfun1 选择整体区域面积eorror", "window", (hv_Height1 - 400) / hv_h,
+		disp_message(hv_hwnd, "top2fun1 选择中心圆eorror", "window", (hv_Height1 - 400) / hv_h,
 			20, "red", "true");
 		(*hv_ret1) = -1;
 		return;
 	}
 
-	GenEllipse(&ho_ROI_0, 1400, 2000, HTuple(-0.838415).TupleRad(), 1640.18, 1524.72);
-	ReduceDomain(ho_Image, ho_ROI_0, &ho_ImageReduced);
-	Threshold(ho_ImageReduced, &ho_Regions, 0, 180);
-	FillUp(ho_Regions, &ho_RegionFillUp);
-	OpeningCircle(ho_RegionFillUp, &ho_RegionOpening, 800);
-	ReduceDomain(ho_ImageReduced, ho_RegionOpening, &ho_ImageReduced1);
 
-	ErosionCircle(ho_RegionOpening, &ho_circle1, 270);
-	ErosionCircle(ho_RegionOpening, &ho_circle2, 370);
-	ErosionCircle(ho_RegionOpening, &ho_circle3, 465);
-	ErosionCircle(ho_RegionOpening, &ho_circle4, 560);
+	AreaCenter(ho_SelectedRegions, &hv_Area, &hv_Row1, &hv_Column1);
+	GenCircle(&ho_circle1_, hv_Row1, hv_Column1, 350);
+	GenCircle(&ho_circle2_, hv_Row1, hv_Column1, 535);
+	GenCircle(&ho_circle3_, hv_Row1, hv_Column1, 620);
+	GenCircle(&ho_circle4_, hv_Row1, hv_Column1, 720);
+	GenCircle(&ho_circle5_, hv_Row1, hv_Column1, 880);
+
+	GenContourRegionXld(ho_circle2_, &ho_Contours, "border");
+	GenRegionContourXld(ho_Contours, &ho_circle2_M, "margin");
+	GenContourRegionXld(ho_circle3_, &ho_Contours, "border");
+	GenRegionContourXld(ho_Contours, &ho_circle3_M, "margin");
+	GenContourRegionXld(ho_circle4_, &ho_Contours, "border");
+	GenRegionContourXld(ho_Contours, &ho_circle4_M, "margin");
+
+	hv_R53 = 10;
+	DilationCircle(ho_circle2_M, &ho_circle2_D, hv_R53);
+	DilationCircle(ho_circle3_M, &ho_circle3_D, hv_R53);
+	DilationCircle(ho_circle4_M, &ho_circle4_D, hv_R53);
+
+	Union2(ho_circle2_D, ho_circle3_D, &ho_circle23_D);
+	Union2(ho_circle23_D, ho_circle4_D, &ho_circle234_D);
+	Intensity(ho_circle234_D, ho_ImageReduced, &hv_Mean, &hv_Deviation);
+	DilationCircle(ho_SelectedRegions, &ho_SelectedRegions_D, 5);
+	Difference(ho_circle5_, ho_SelectedRegions_D, &ho_circleSel_5Dif);
+	ReduceDomain(ho_ImageReduced, ho_circleSel_5Dif, &ho_ImageReduced1_);
+	Threshold(ho_ImageReduced1_, &ho_ImageReduced1_th, 50, 255);
+	OpeningCircle(ho_ImageReduced1_th, &ho_RegionWide, 5);
+	DilationCircle(ho_RegionWide, &ho_RegionDilation, 10);
+	Intersection(ho_ImageReduced1_th, ho_RegionDilation, &ho_RegionWideIntersection
+	);
+
+	PaintRegion(ho_circle234_D, ho_ImageReduced1_, &ho_ImageResult, 6, "fill");
+	Threshold(ho_ImageResult, &ho_ImageResult_th, 80, 255);
+	Union2(ho_RegionWideIntersection, ho_ImageResult_th, &ho_RegionUnion);
+
+	ClosingCircle(ho_RegionUnion, &ho_RegionClosing, 10);
+	Connection(ho_RegionClosing, &ho_ConnectedRegions1);
+	SelectShape(ho_ConnectedRegions1, &ho_SelectedRegions1, "area", "and", 10, 500000);
+	Union1(ho_SelectedRegions1, &ho_RegionUnion1);
+
+	RegionFeatures(ho_RegionUnion1, "area", &hv_Value);
+	if (0 != (hv_Value>1200))
+	{
+		ConcatObj(ho_EmptyRegion, ho_RegionUnion1, &ho_EmptyRegion);
+	}
+	else
+	{
+		 
+			DispObj(ho_SelectedRegions1, hv_hwnd);
+	}
 
 
-	 
-		DispObj(ho_circle3, hv_hwnd);
 	//气孔检测
 
 
@@ -1743,19 +1808,7 @@ void top2fun1(HObject ho_Image, HObject *ho_region1, HTuple hv_prav2_1, HTuple h
 	{
 
 
-
-
-
-
-
-
-
-
 	}
-
-
-
-
 
 	Union1(ho_EmptyRegion, &(*ho_region1));
 	RegionFeatures((*ho_region1), "area", &hv_errorRgnArea);
@@ -1766,13 +1819,11 @@ void top2fun1(HObject ho_Image, HObject *ho_region1, HTuple hv_prav2_1, HTuple h
 
 	 
 		SetColor(hv_hwnd, "red");
-	 
-		SetLineWidth(hv_hwnd, 2);
+	//dev_set_line_width (2)
 	DilationCircle((*ho_region1), &ho_RegionDilation1, 30);
 	 
 		DispObj(ho_RegionDilation1, hv_hwnd);
-	 
-		SetLineWidth(hv_hwnd, 1);
+	//dev_set_line_width (1)
 	//hv_hwnd
 
 
@@ -1826,12 +1877,11 @@ void DetectModule::detectTop2(HalconCpp::HObject& ho_Image, const HTuple& hv_Win
 
 		if (0 != (hv_ret1<0))
 		{
-			if (0 != (hv_ret1 == -1))
-			{
+			
 				disp_message(hv_hwnd, "NG 槽内异物", "window", 50, 10, "red", "true");
 				top2_fun1NgNum = top2_fun1NgNum + 1;
 				(*hv_Result) = 5;
-			}
+			
 		}
 
 		if (0 != ((((hv_ret1 + hv_ret2) + hv_ret3) + hv_ret4) == 0))
@@ -1982,8 +2032,8 @@ void Sidefun1(HObject ho_Image, HObject *ho_region1, HObject *ho_outRegion1, HTu
 
 	(*hv_ret1) = 0;
 	//单片高度,用于判断槽的连续性
-	hv_chipHeight = 240;
-	hv_chipWidth0 = 950;
+	hv_chipHeight = 285;
+	hv_chipWidth0 = 1050;
 	 
 		SetColor(hv_hwnd, "green");
 
@@ -2011,7 +2061,7 @@ void Sidefun1(HObject ho_Image, HObject *ho_region1, HObject *ho_outRegion1, HTu
 		return;
 	}
 
-	GenRectangle1(&ho_RectangleAllPian, 0, hv_PianColumn2 - 925, hv_Height1 - hv_chipHeight,
+	GenRectangle1(&ho_RectangleAllPian, 0, hv_PianColumn2 - 925, hv_Height1 - hv_chipHeight/2,
 		hv_PianColumn2);
 	ReduceDomain(ho_Image, ho_RectangleAllPian, &ho_ImageReduced);
 	Threshold(ho_ImageReduced, &ho_Regions, 0, 150);

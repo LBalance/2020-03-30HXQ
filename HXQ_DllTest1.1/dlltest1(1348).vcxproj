@@ -97,10 +97,12 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>F:\program files\halcon17\include\halconcpp;F:\program files\halcon17\include;D:\program\halcon\include\halconcpp;D:\program\halcon\include;E:\Program Files\MVTec\HALCON-17.12-Progress\include\halconcpp;E:\Program Files\MVTec\HALCON-17.12-Progress\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>F:\program files\halcon17\include\halconcpp;F:\program files\halcon17\include;D:\program\halcon\include\halconcpp;D:\program\halcon\include;E:\Program Files\MVTec\HALCON-17.12-Progress\include\halconcpp;E:\Program Files\MVTec\HALCON-17.12-Progress\include;C:\Program Files\MVTec\HALCON-17.12-Progress\include\halconcpp;C:\Program Files\MVTec\HALCON-17.12-Progress\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
+      <AdditionalLibraryDirectories>C:\Program Files\MVTec\HALCON-17.12-Progress\lib\x64-win64;E:\Program Files\MVTec\HALCON-17.12-Progress\lib\x64-win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>halconcpp.lib</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -120,10 +122,12 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>F:\program files\halcon17\include\halconcpp;F:\program files\halcon17\include;D:\program\halcon\include\halconcpp;D:\program\halcon\include;E:\Program Files\MVTec\HALCON-17.12-Progress\include\halconcpp;E:\Program Files\MVTec\HALCON-17.12-Progress\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>F:\program files\halcon17\include\halconcpp;F:\program files\halcon17\include;D:\program\halcon\include\halconcpp;D:\program\halcon\include;E:\Program Files\MVTec\HALCON-17.12-Progress\include\halconcpp;E:\Program Files\MVTec\HALCON-17.12-Progress\include;C:\Program Files\MVTec\HALCON-17.12-Progress\include\halconcpp;C:\Program Files\MVTec\HALCON-17.12-Progress\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
+      <AdditionalLibraryDirectories>C:\Program Files\MVTec\HALCON-17.12-Progress\lib\x64-win64;E:\Program Files\MVTec\HALCON-17.12-Progress\lib\x64-win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>halconcpp.lib</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -145,12 +149,14 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>F:\program files\halcon17\include\halconcpp;F:\program files\halcon17\include;D:\program\halcon\include\halconcpp;D:\program\halcon\include;E:\Program Files\MVTec\HALCON-17.12-Progress\include\halconcpp;E:\Program Files\MVTec\HALCON-17.12-Progress\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>F:\program files\halcon17\include\halconcpp;F:\program files\halcon17\include;D:\program\halcon\include\halconcpp;D:\program\halcon\include;E:\Program Files\MVTec\HALCON-17.12-Progress\include\halconcpp;E:\Program Files\MVTec\HALCON-17.12-Progress\include;C:\Program Files\MVTec\HALCON-17.12-Progress\include\halconcpp;C:\Program Files\MVTec\HALCON-17.12-Progress\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>C:\Program Files\MVTec\HALCON-17.12-Progress\lib\x64-win64;E:\Program Files\MVTec\HALCON-17.12-Progress\lib\x64-win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>halconcpp.lib</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -172,12 +178,14 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>F:\program files\halcon17\include\halconcpp;F:\program files\halcon17\include;D:\program\halcon\include\halconcpp;D:\program\halcon\include;E:\Program Files\MVTec\HALCON-17.12-Progress\include\halconcpp;E:\Program Files\MVTec\HALCON-17.12-Progress\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>F:\program files\halcon17\include\halconcpp;F:\program files\halcon17\include;D:\program\halcon\include\halconcpp;D:\program\halcon\include;E:\Program Files\MVTec\HALCON-17.12-Progress\include\halconcpp;E:\Program Files\MVTec\HALCON-17.12-Progress\include;C:\Program Files\MVTec\HALCON-17.12-Progress\include\halconcpp;C:\Program Files\MVTec\HALCON-17.12-Progress\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>C:\Program Files\MVTec\HALCON-17.12-Progress\lib\x64-win64;E:\Program Files\MVTec\HALCON-17.12-Progress\lib\x64-win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>halconcpp.lib</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>

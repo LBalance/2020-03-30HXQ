@@ -27,14 +27,14 @@ using namespace HalconCpp;
 
 
 
-#define PERSONAL_COMPUTER
-#ifdef PERSONAL_COMPUTER
-//个人电脑
-#pragma comment(lib,R"(E:\Program Files\MVTec\HALCON-17.12-Progress\lib\x64-win64\halconcpp.lib)")
-#else
-//办公室
-#pragma comment(lib,R"(D:\program\halcon\lib\x64-win64\halconcpp.lib)")
-#endif PERSONAL_COMPUTER
+//#define PERSONAL_COMPUTER
+//#ifdef PERSONAL_COMPUTER
+////个人电脑
+//#pragma comment(lib,R"(E:\Program Files\MVTec\HALCON-17.12-Progress\lib\x64-win64\halconcpp.lib)")
+//#else
+////办公室
+//#pragma comment(lib,R"(D:\program\halcon\lib\x64-win64\halconcpp.lib)")
+//#endif PERSONAL_COMPUTER
 
 
 
