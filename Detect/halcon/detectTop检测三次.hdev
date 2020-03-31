@@ -23,7 +23,7 @@
 <l>prav2_7:=0</l>
 <l>prav2_8:=0</l>
 <c></c>
-<l>CaoWidthUp:=0.65</l>
+<l>CaoWidthUp:=0.68</l>
 <l>CaoWidthDown:=0.45</l>
 <l>MaoCiWidth:=0.15</l>
 <l>MaoCiHeight:=0.15</l>
@@ -40,7 +40,7 @@
 <c>    </c>
 <l>OKNUM:=0</l>
 <c></c>
-<l>workPostion:= 2</l>
+<l>workPostion:= 1</l>
 <c></c>
 <l>if(workPostion==0)//第一工位前3张图片处理</l>
 <l>    list_image_files(\
@@ -62,7 +62,7 @@
 <l>    endfor</l>
 <l>elseif(workPostion==1)//第一工位第4张图片处理</l>
 <l>    list_image_files(\
-    'm:/胜克换向器/DS052J-H/2020-03-28/Images/Top2/All/'      ,\
+    'd:/Images/Top2/All/'      ,\
                      'default', [], ImageFiles)</l>
 <c>    </c>
 <l>    tuple_length (ImageFiles, Length)</l>
@@ -79,7 +79,7 @@
 <l>    endfor</l>
 <l>elseif(workPostion==2)//第二工位</l>
 <l>    list_image_files(\
-    'm:/胜克换向器/DS052J-H/2020-03-28/Images/Side/All/'      ,\
+    'd:/Images/Side/Bad/'      ,\
                      'default', [], ImageFiles)</l>
 <c>    </c>
 <l>    tuple_length (ImageFiles, Length)</l>
@@ -1070,8 +1070,8 @@
 <c></c>
 <l>ret1:=0</l>
 <c>*单片高度,用于判断槽的连续性</c>
-<l>chipHeight :=240</l>
-<l>chipWidth0:=950</l>
+<l>chipHeight :=285</l>
+<l>chipWidth0:=1050</l>
 <l>dev_set_color('green')</l>
 <c></c>
 <l>get_window_extents(hwnd, Row, Column, Width, Height)</l>
@@ -1096,7 +1096,7 @@
 <l>    return()</l>
 <l>endif</l>
 <c></c>
-<l>gen_rectangle1(RectangleAllPian, 0, PianColumn2-925, Height1-chipHeight, PianColumn2)</l>
+<l>gen_rectangle1(RectangleAllPian, 0, PianColumn2-925, Height1-chipHeight/2, PianColumn2)</l>
 <l>reduce_domain(Image, RectangleAllPian, ImageReduced)</l>
 <l>threshold (ImageReduced, Regions, 0, 150)</l>
 <l>closing_circle(Regions, RegionClosing1, 3.5)</l>
@@ -2699,26 +2699,77 @@
 <c></c>
 <l>gen_empty_region(EmptyRegion)</l>
 <c></c>
-<l>if(0)</l>
-<l>    disp_message(hwnd, 'topfun1 选择整体区域面积eorror', 'window', (Height1-400)/h, 20, 'red', 'true')</l>
+<c></c>
+<c></c>
+<l>gen_ellipse (ROI_0, 1400, 2000, rad(-0.838415), 1640.18, 1524.72)</l>
+<l>reduce_domain(Image, ROI_0, ImageReduced)</l>
+<l>* threshold (ImageReduced, Regions, 0, 180)</l>
+<l>* fill_up(Regions, RegionFillUp)</l>
+<l>* opening_circle(RegionFillUp, RegionOpening, 800)</l>
+<l>* reduce_domain(ImageReduced, RegionOpening, ImageReduced1)</l>
+<c></c>
+<l>* erosion_circle(RegionOpening, circle1, 270)</l>
+<l>* erosion_circle(RegionOpening, circle2, 370)</l>
+<l>* erosion_circle(RegionOpening, circle3, 465)</l>
+<l>* erosion_circle(RegionOpening, circle4, 560)</l>
+<l>threshold (ImageReduced, Regions, 100, 255)</l>
+<l>connection(Regions, ConnectedRegions)</l>
+<l>select_shape (ConnectedRegions, SelectedRegions, ['circularity','area'], 'and', [0.954,276735], [1,492495])</l>
+<l>count_obj(SelectedRegions, Number)</l>
+<l>if(Number==0)</l>
+<l>    disp_message(hwnd, 'top2fun1 选择中心圆eorror', 'window', (Height1-400)/h, 20, 'red', 'true')</l>
 <l>    ret1 := -1</l>
 <l>    return()</l>
 <l>endif</l>
 <c></c>
-<l>gen_ellipse (ROI_0, 1400, 2000, rad(-0.838415), 1640.18, 1524.72)</l>
-<l>reduce_domain(Image, ROI_0, ImageReduced)</l>
-<l>threshold (ImageReduced, Regions, 0, 180)</l>
-<l>fill_up(Regions, RegionFillUp)</l>
-<l>opening_circle(RegionFillUp, RegionOpening, 800)</l>
-<l>reduce_domain(ImageReduced, RegionOpening, ImageReduced1)</l>
 <c></c>
-<l>erosion_circle(RegionOpening, circle1, 270)</l>
-<l>erosion_circle(RegionOpening, circle2, 370)</l>
-<l>erosion_circle(RegionOpening, circle3, 465)</l>
-<l>erosion_circle(RegionOpening, circle4, 560)</l>
+<l>area_center(SelectedRegions, Area, Row1, Column1)</l>
+<l>gen_circle(circle1_, Row1, Column1, 350)</l>
+<l>gen_circle(circle2_, Row1, Column1, 535)</l>
+<l>gen_circle(circle3_, Row1, Column1, 620)</l>
+<l>gen_circle(circle4_, Row1, Column1, 720)</l>
+<l>gen_circle(circle5_, Row1, Column1, 880)</l>
+<c></c>
+<l>gen_contour_region_xld(circle2_, Contours, 'border')</l>
+<l>gen_region_contour_xld(Contours, circle2_M, 'margin')</l>
+<l>gen_contour_region_xld(circle3_, Contours, 'border')</l>
+<l>gen_region_contour_xld(Contours, circle3_M, 'margin')</l>
+<l>gen_contour_region_xld(circle4_, Contours, 'border')</l>
+<l>gen_region_contour_xld(Contours, circle4_M, 'margin')</l>
+<c></c>
+<l>R53:=10</l>
+<l>dilation_circle(circle2_M, circle2_D, R53)</l>
+<l>dilation_circle(circle3_M, circle3_D, R53)</l>
+<l>dilation_circle(circle4_M, circle4_D, R53)</l>
+<c></c>
+<l>union2(circle2_D, circle3_D, circle23_D)</l>
+<l>union2(circle23_D, circle4_D, circle234_D)</l>
+<l>intensity(circle234_D, ImageReduced, Mean, Deviation)</l>
+<l>dilation_circle(SelectedRegions, SelectedRegions_D, 5)</l>
+<l>difference(circle5_, SelectedRegions_D, circleSel_5Dif)</l>
+<l>reduce_domain(ImageReduced, circleSel_5Dif, ImageReduced1_)</l>
+<l>threshold (ImageReduced1_, ImageReduced1_th, 50, 255)//</l>
+<l>opening_circle(ImageReduced1_th, RegionWide, 5)</l>
+<l>dilation_circle(RegionWide, RegionDilation, 10)</l>
+<l>intersection(ImageReduced1_th, RegionDilation, RegionWideIntersection)</l>
+<c></c>
+<l>paint_region(circle234_D, ImageReduced1_, ImageResult, 6, 'fill')</l>
+<l>threshold (ImageResult, ImageResult_th, 80, 255)//</l>
+<l>union2(RegionWideIntersection, ImageResult_th, RegionUnion)</l>
+<c></c>
+<l>closing_circle(RegionUnion, RegionClosing, 10)</l>
+<l>connection(RegionClosing, ConnectedRegions1)</l>
+<l>select_shape (ConnectedRegions1, SelectedRegions1, 'area', 'and', 10, 500000)</l>
+<l>union1(SelectedRegions1, RegionUnion1)</l>
+<c></c>
+<l>region_features(RegionUnion1, 'area', Value)</l>
+<l>if(Value&gt;1200)</l>
+<l>    concat_obj(EmptyRegion, RegionUnion1, EmptyRegion)</l>
+<l>else</l>
+<l>    dev_display(SelectedRegions1)</l>
+<l>endif</l>
 <c></c>
 <c></c>
-<l>dev_display(circle3)</l>
 <c>*气孔检测</c>
 <c></c>
 <c></c>
@@ -2729,19 +2780,7 @@
 <l>if(errorRgnArea==0 and ret1==0)</l>
 <c>    </c>
 <c>    </c>
-<c>    </c>
-<c>    </c>
-<c>    </c>
-<c>    </c>
-<c>    </c>
-<c>    </c>
-<c>    </c>
-<c>    </c>
 <l>endif</l>
-<c></c>
-<c></c>
-<c></c>
-<c></c>
 <c></c>
 <l>union1(EmptyRegion, region1)</l>
 <l>region_features(region1, 'area', errorRgnArea)</l>
@@ -2750,10 +2789,10 @@
 <l>endif</l>
 <c></c>
 <l>dev_set_color('red')</l>
-<l>dev_set_line_width(2)</l>
+<l>*dev_set_line_width(2)</l>
 <l>dilation_circle(region1, RegionDilation1, 30)</l>
 <l>dev_display(RegionDilation1)</l>
-<l>dev_set_line_width(1)</l>
+<l>*dev_set_line_width(1)</l>
 <c>*hv_hwnd</c>
 <c></c>
 <c></c>
