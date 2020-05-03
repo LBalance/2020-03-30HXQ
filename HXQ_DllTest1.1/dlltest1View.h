@@ -60,7 +60,7 @@ public:
 	afx_msg void OnLogin();
 	afx_msg void OnOpenOsk();
 	afx_msg void OnExcMode();
-	afx_msg void OnClose();
+	afx_msg void OnID_EDIT_OKNG();
 };
 
 #ifndef _DEBUG  // dlltest1View.cpp 中的调试版本

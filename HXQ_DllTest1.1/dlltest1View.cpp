@@ -45,7 +45,7 @@ using namespace HalconCpp;
 
 
 //定义生产线排序数
-int g_lineNum = ProductionLineNum2::Line56_1348;
+int g_lineNum = ProductionLineNum2::LineXX_DS052;
 
 HTuple mhv_WindowHandle = 0;
 HTuple ghv_WindowHandle = 0;
@@ -61,7 +61,8 @@ BYTE g_SideMark = 0;
 BYTE g_topMark2 = 0;
 //g_runNum<0时，不自动连续，自选图片。
 int g_runNum = -1;
-
+//是否加载All标记
+int g_isLoadAll = 0;
 //分别传入side top检测函数的参数
 double top1, top2, top3, top4, top5, top6, top7, top8;
 double side1, side2, side3, side4, side5, side6, side7, side8;
@@ -454,13 +455,24 @@ void Bounce(void * parg)
 		g_runNum = -1;
 	}
 
+	CString pathLast;
+	if (g_isLoadAll == 0)
+	{
+		pathLast= _T(R"(\Top\Bad\)");
+	}
+	else
+	{
+		pathLast = _T(R"(\Top\All\)");
+	}
+
+
 	HObject Image;
 	CString path;
 	HTuple fullPath, subPath, fullPathLen;
 	if (g_runNum >= 0)
 	{
 		HTuple  hv_ImageFiles, hv_Length, hv_Index, hv_Result;
-		path = m_szPicFilePath + _T(R"(\Top\Bad)");
+		path = m_szPicFilePath + pathLast;
 		//unicode 转 gb2312
 		wstring_convert<codecvt<wchar_t, char, mbstate_t>> decode(::new codecvt<wchar_t, char, mbstate_t>("CHS"));
 		wstring wsz(path.GetBuffer());
@@ -481,7 +493,7 @@ void Bounce(void * parg)
 	else
 	{
 		CString strFile = _T("");
-		path = m_szPicFilePath + _T(R"(\Top\Bad\)");
+		path = m_szPicFilePath + pathLast;
 		CFileDialog    dlgFile(TRUE, NULL, path, OFN_HIDEREADONLY,
 			_T("Describe Files (*.tif，*.tiff，*.jpg，*.jpeg，*.png，*.bmp)|*.tif;*.tiff;*.jpg;*.jpeg;*.png;*.bmp|All Files (*.*)|*.*||"), NULL);//（*.tif，*.tiff，*.jpg，*.jpeg，*.png，*.bmp）|*.tif;*.tiff;*.jpg;*.jpeg;*.png;*.bmp
 		int a = (int)dlgFile.DoModal();
@@ -526,13 +538,23 @@ void Bounce1(void * parg)
 		g_runNum = -1;
 	}
 
+	CString pathLast;
+	if (g_isLoadAll == 0)
+	{
+		pathLast = _T(R"(\Side\Bad\)");
+	}
+	else
+	{
+		pathLast = _T(R"(\Side\All\)");
+	}
+
 	HObject Image;
 	CString path;
 	HTuple fullPath, subPath, fullPathLen;
 	if (g_runNum >= 0)
 	{
 		HTuple  hv_ImageFiles, hv_Length, hv_Index, hv_Result;
-		path = m_szPicFilePath + _T(R"(\Side\Bad)");
+		path = m_szPicFilePath + pathLast;
 		//unicode 转 gb2312
 		wstring_convert<codecvt<wchar_t, char, mbstate_t>> decode(::new codecvt<wchar_t, char, mbstate_t>("CHS"));
 		wstring wsz(path.GetBuffer());
@@ -563,7 +585,7 @@ void Bounce1(void * parg)
 	else
 	{
 		CString strFile = _T("");
-		path = m_szPicFilePath + _T(R"(\Side\Bad\)");
+		path = m_szPicFilePath + pathLast;
 		CFileDialog    dlgFile(TRUE, NULL, path, OFN_HIDEREADONLY,
 			_T("Describe Files (*.tif，*.tiff，*.jpg，*.jpeg，*.png，*.bmp)|*.tif;*.tiff;*.jpg;*.jpeg;*.png;*.bmp|All Files (*.*)|*.*||"), NULL);//（*.tif，*.tiff，*.jpg，*.jpeg，*.png，*.bmp）|*.tif;*.tiff;*.jpg;*.jpeg;*.png;*.bmp
 		if (dlgFile.DoModal() == 1)
@@ -606,13 +628,24 @@ void Bounce_(void * parg)
 		g_runNum = -1;
 	}
 
+	CString pathLast;
+	if (g_isLoadAll == 0)
+	{
+		pathLast = _T(R"(\Top2\Bad\)");
+	}
+	else
+	{
+		pathLast = _T(R"(\Top2\All\)");
+	}
+
+
 	HObject Image;
 	CString path;
 	HTuple fullPath, subPath, fullPathLen;
 	if (g_runNum >= 0)
 	{
 		HTuple  hv_ImageFiles, hv_Length, hv_Index, hv_Result;
-		path = m_szPicFilePath + _T(R"(\Top2\Bad)");
+		path = m_szPicFilePath + pathLast;
 		//unicode 转 gb2312
 		wstring_convert<codecvt<wchar_t, char, mbstate_t>> decode(::new codecvt<wchar_t, char, mbstate_t>("CHS"));
 		wstring wsz(path.GetBuffer());
@@ -633,7 +666,7 @@ void Bounce_(void * parg)
 	else
 	{
 		CString strFile = _T("");
-		path = m_szPicFilePath + _T(R"(\Top2\Bad\)");
+		path = m_szPicFilePath + pathLast;
 		CFileDialog    dlgFile(TRUE, NULL, path, OFN_HIDEREADONLY,
 			_T("Describe Files (*.tif，*.tiff，*.jpg，*.jpeg，*.png，*.bmp)|*.tif;*.tiff;*.jpg;*.jpeg;*.png;*.bmp|All Files (*.*)|*.*||"), NULL);//（*.tif，*.tiff，*.jpg，*.jpeg，*.png，*.bmp）|*.tif;*.tiff;*.jpg;*.jpeg;*.png;*.bmp
 		int a = (int)dlgFile.DoModal();
@@ -740,6 +773,7 @@ BEGIN_MESSAGE_MAP(Cdlltest1View, CFormView)
 	ON_COMMAND(ID_LOGIN, &Cdlltest1View::OnLogin)
 	ON_COMMAND(ID_OPEN_OSK, &Cdlltest1View::OnOpenOsk)
 	ON_COMMAND(ID_EXC_MODE, &Cdlltest1View::OnExcMode)
+	ON_COMMAND(ID_EDIT_OKNG, &Cdlltest1View::OnID_EDIT_OKNG)
 END_MESSAGE_MAP()
 
 // Cdlltest1View 构造/析构
@@ -750,32 +784,32 @@ Cdlltest1View::Cdlltest1View()
 	// TODO: 在此处添加构造代码
 	switch (g_lineNum)
 	{
-	case ProductionLineNum2::Line56_1348: {
+	case ProductionLineNum2::LineXX_DS052: {
 		m_szPicFilePath = "D:\\Images";
 		g_picHeight = 2748;
 		g_picWidth = 3840;
-		top1 = 28.3;
-		top2 = 27.67;
-		top3 = 1.2;
+		top1 = 28;
+		top2 = 27.54;
+		top3 = 1.205;
 		top4 =1.0;
-		top5 = 0.997;
-		top6 = 56;
-		top7 = 2.5;
-		top8 = 15;
+		top5 = 0.996;
+		top6 = 60;
+		top7 = 0.6;
+		top8 = 12;
 		side1 = 0.68;/* 0.4;*/
-		side2 = 0.42;/*0.3;*/
-		side3 = 0.15;
-		side4 = 0.15;
-		side5 = 15;
-		side6 = 5000;
+		side2 = 0.40;/*0.3;*/
+		side3 = 1000;
+		side4 = 30;
+		side5 = 20;
+		side6 = 25000;
 		side7 = 1;
 		side8 = 1;
 		top2_1 = 1;
 		top2_2 = 1;
 		top2_3 = 1;
 		top2_4 = 1;
-		top2_5 = 450;
-		top2_6 = 1;
+		top2_5 = 2100;
+		top2_6 = 0;
 		top2_7 = 1;
 		top2_8 = 1;
 		break;
@@ -980,4 +1014,18 @@ void Cdlltest1View::OnExcMode()
 		g_runNum = -1;
 	}
 	AfxMessageBox(_T("切换打开模式完成~"));
+}
+
+void Cdlltest1View::OnID_EDIT_OKNG()
+{
+	// TODO: 在此添加命令处理程序代码
+	if (g_isLoadAll == 0)
+	{
+		g_isLoadAll = 1;
+	}
+	else
+	{
+		g_isLoadAll = 0;
+	}
+	AfxMessageBox(_T("切换路径完成~"));
 }

@@ -139,7 +139,7 @@ BEGIN
     END
     POPUP "编辑(&E)"
     BEGIN
-        MENUITEM "撤消(&U)\tCtrl+Z",              ID_EDIT_UNDO
+        MENUITEM "OK/NG",                       ID_EDIT_OKNG
         MENUITEM SEPARATOR
         MENUITEM "剪切(&T)\tCtrl+X",              ID_EDIT_CUT
         MENUITEM "复制(&C)\tCtrl+C",              ID_EDIT_COPY
@@ -442,6 +442,7 @@ BEGIN
     ID_32785                "启用停用自动连续打开\n切换"
     ID_EXC_MODE             "启用停用连续打开\n切换"
     ID_LOAD_TOP2            "打开顶部2工位图片并检测\n顶部测试"
+    ID_EDIT_OKNG            "加载AllorBad\n切换路径"
 END
 
 #endif    // 中文(简体，中国) resources

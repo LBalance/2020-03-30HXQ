@@ -33,22 +33,10 @@
 #include <afxcontrolbars.h>     // 功能区和控件条的 MFC 支持
 
 
-//德玛西亚
-enum ProductionLineNum
-{
-	Line16_1185 = 16,
-	Line14_1185 = 14,
-	Line43_1186 = 43,
-	Line45_1186 = 45,
-	Line42_1199 = 42,
-	Line37_1213 = 37,
-	Line28_1135 = 28
-};
 
-//德玛西亚
 enum ProductionLineNum2
 {
-	Line56_1348 = 56,
+	LineXX_DS052 = 56
 
 };
 
